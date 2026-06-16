@@ -431,18 +431,20 @@ class SettingsPage(QWidget):
         s = self._win.settings
         old_theme = s.theme
 
-        # Theme
-        theme_keys = self._theme_combo._keys
-        s.theme = theme_keys[self._theme_combo.currentIndex()]
+        # Theme (hardcoded keys)
+        _theme_keys = ["dark", "light", "system"]
+        _ti = self._theme_combo.currentIndex()
+        s.theme = _theme_keys[_ti] if 0 <= _ti < len(_theme_keys) else "dark"
 
-        # Time format (hardcoded keys — more robust than ._keys attribute)
+        # Time format (hardcoded keys)
         _fmt_keys = ["24h", "12h"]
         _fi = self._time_fmt_combo.currentIndex()
         s.time_format = _fmt_keys[_fi] if 0 <= _fi < len(_fmt_keys) else "24h"
 
-        # Method
-        method_keys = self._method_combo._keys
-        s.method     = method_keys[self._method_combo.currentIndex()]
+        # Method (hardcoded keys)
+        _method_keys = list(pc.METHODS.keys())
+        _mi = self._method_combo.currentIndex()
+        s.method = _method_keys[_mi] if 0 <= _mi < len(_method_keys) else "Kemenag"
         s.asr_method = self._asr_combo.currentIndex() + 1
 
         # Location
@@ -459,8 +461,9 @@ class SettingsPage(QWidget):
         s.sound_enabled        = self._sound_cb.isChecked()
         s.custom_sound_path    = self._sound_path.text().strip()
 
-        reminder_keys = self._reminder_combo._keys
-        s.reminder_minutes = int(reminder_keys[self._reminder_combo.currentIndex()])
+        _reminder_keys = ["0", "5", "10", "15"]
+        _ri = self._reminder_combo.currentIndex()
+        s.reminder_minutes = int(_reminder_keys[_ri] if 0 <= _ri < len(_reminder_keys) else "5")
 
         for en, edit in self._prayer_sound_edits.items():
             s.prayer_sounds[en] = edit.text().strip()
