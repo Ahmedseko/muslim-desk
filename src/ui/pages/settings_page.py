@@ -1,0 +1,478 @@
+"""Settings page."""
+from __future__ import annotations
+
+from pathlib import Path
+
+from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
+                              QFrame, QPushButton, QComboBox, QSpinBox,
+                              QCheckBox, QLineEdit, QFileDialog, QDoubleSpinBox,
+                              QScrollArea, QGroupBox, QSlider, QSizePolicy)
+
+from ..widgets import SectionCard
+from .. import theme as th
+from ...core import prayer_calculator as pc
+
+
+class SettingsPage(QWidget):
+    def __init__(self, main_win):
+        super().__init__()
+        self._win = main_win
+        self._build()
+        self.refresh()
+
+    def _build(self):
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.setSpacing(0)
+
+        # Scrollable area
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        outer.addWidget(scroll)
+
+        container = QWidget()
+        scroll.setWidget(container)
+        root = QVBoxLayout(container)
+        root.setContentsMargins(28, 20, 28, 28)
+        root.setSpacing(16)
+
+        # Header
+        header_row = QHBoxLayout()
+        lbl = QLabel("Pengaturan")
+        lbl.setObjectName("H1")
+        header_row.addWidget(lbl)
+        header_row.addStretch()
+        self._btn_save = QPushButton("💾 Simpan Pengaturan")
+        self._btn_save.setObjectName("Primary")
+        self._btn_save.setFixedHeight(36)
+        self._btn_save.clicked.connect(self._save)
+        header_row.addWidget(self._btn_save)
+        root.addLayout(header_row)
+
+        # ── Appearance
+        app_card = SectionCard("🎨  Tampilan")
+        self._theme_combo = self._add_combo(app_card, "Tema",
+                                            ["dark", "light", "system"],
+                                            ["Gelap (Dark)", "Terang (Light)", "Ikuti Sistem"])
+        self._time_fmt_combo = self._add_combo(
+            app_card, "Format Waktu",
+            ["24h", "12h"],
+            ["24 Jam  (13:06)", "12 Jam  (1:06 PM)"],
+        )
+        # Apply time format live when changed (no need to click Save)
+        self._time_fmt_combo.currentIndexChanged.connect(self._apply_time_format_live)
+        app_card.body.addLayout(self._make_hint("Perubahan tema diterapkan setelah disimpan."))
+        root.addWidget(app_card)
+
+        # ── Prayer calculation
+        calc_card = SectionCard("🕌  Metode Perhitungan")
+        method_keys = list(pc.METHODS.keys())
+        method_names = [f"{k} — {v['name']}" for k, v in pc.METHODS.items()]
+        self._method_combo = self._add_combo(calc_card, "Metode Hisab", method_keys, method_names)
+
+        self._asr_combo = self._add_combo(calc_card, "Metode Ashar",
+                                          ["1", "2"],
+                                          ["Syafi'i / Maliki / Hanbali (faktor 1)",
+                                           "Hanafi (faktor 2)"])
+        root.addWidget(calc_card)
+
+        # ── Location
+        loc_card = SectionCard("📍  Lokasi")
+
+        self._auto_loc_cb = QCheckBox("Deteksi lokasi otomatis via internet")
+        self._auto_loc_cb.setStyleSheet("background: transparent;")
+        self._auto_loc_cb.stateChanged.connect(self._on_auto_loc_changed)
+        loc_card.body.addWidget(self._auto_loc_cb)
+
+        self._lat_spin = self._add_double_spin(loc_card, "Lintang (°)", -90, 90, 6)
+        self._lon_spin = self._add_double_spin(loc_card, "Bujur (°)", -180, 180, 6)
+        self._tz_spin  = self._add_double_spin(loc_card, "Zona Waktu (UTC+)", -12, 14, 1)
+        self._alt_spin = self._add_double_spin(loc_card, "Ketinggian (mdpl)", 0, 9000, 0)
+
+        self._city_edit = self._add_lineedit(loc_card, "Nama Kota")
+        self._country_edit = self._add_lineedit(loc_card, "Negara")
+
+        # City search button
+        city_search_row = QHBoxLayout()
+        city_search_row.setSpacing(8)
+        lbl_cs = QLabel("Cari kota / kecamatan")
+        lbl_cs.setStyleSheet(f"color: {th.MUTED}; min-width: 180px; background: transparent;")
+        self._btn_city_search = QPushButton("🔍 Cari Kota / Kecamatan")
+        self._btn_city_search.clicked.connect(self._open_city_search)
+        city_search_row.addWidget(lbl_cs)
+        city_search_row.addWidget(self._btn_city_search, 1)
+        loc_card.body.addLayout(city_search_row)
+
+        loc_card.body.addLayout(
+            self._make_hint("Gunakan 'Cari Kota' untuk menemukan kecamatan/kabupaten secara akurat.")
+        )
+        root.addWidget(loc_card)
+
+        # ── Notification
+        notif_card = SectionCard("🔔  Notifikasi & Alarm")
+        self._notif_cb = QCheckBox("Aktifkan notifikasi waktu sholat")
+        self._notif_cb.setStyleSheet("background: transparent;")
+        notif_card.body.addWidget(self._notif_cb)
+
+        self._sound_cb = QCheckBox("Aktifkan suara adzan")
+        self._sound_cb.setStyleSheet("background: transparent;")
+        notif_card.body.addWidget(self._sound_cb)
+
+        # Custom sound path
+        sound_row = QHBoxLayout()
+        sound_row.setSpacing(8)
+        lbl_sound = QLabel("File suara (.wav)")
+        lbl_sound.setStyleSheet(f"color: {th.MUTED}; min-width: 140px; background: transparent;")
+        self._sound_path = QLineEdit()
+        self._sound_path.setPlaceholderText("Kosong = suara default Windows")
+        self._sound_path.setReadOnly(True)
+        btn_browse = QPushButton("Pilih File")
+        btn_browse.setFixedWidth(80)
+        btn_browse.clicked.connect(self._browse_sound)
+        btn_clear = QPushButton("Hapus")
+        btn_clear.setFixedWidth(70)
+        btn_clear.clicked.connect(lambda: self._sound_path.clear())
+        sound_row.addWidget(lbl_sound)
+        sound_row.addWidget(self._sound_path, 1)
+        sound_row.addWidget(btn_browse)
+        sound_row.addWidget(btn_clear)
+        notif_card.body.addLayout(sound_row)
+
+        self._reminder_combo = self._add_combo(
+            notif_card, "Pengingat sebelum waktu sholat",
+            ["0", "5", "10", "15"],
+            ["Tidak ada pengingat", "5 menit sebelum", "10 menit sebelum", "15 menit sebelum"],
+        )
+
+        # ── Per-prayer sound section
+        sep2 = QFrame()
+        sep2.setFixedHeight(1)
+        sep2.setStyleSheet(f"background: {th.BORDER};")
+        notif_card.body.addWidget(sep2)
+
+        lbl_per = QLabel("Suara Adzan per Waktu Sholat")
+        lbl_per.setStyleSheet(
+            f"font-size: 12px; font-weight: 700; color: {th.MUTED}; "
+            f"letter-spacing: 1px; background: transparent; margin-top: 4px;"
+        )
+        notif_card.body.addWidget(lbl_per)
+
+        self._prayer_sound_edits: dict[str, QLineEdit] = {}
+        _PRAYER_LABELS = [
+            ("Fajr",    "Subuh"),
+            ("Dhuhr",   "Dzuhur"),
+            ("Asr",     "Ashar"),
+            ("Maghrib", "Maghrib"),
+            ("Isha",    "Isya"),
+        ]
+        for en, id_name in _PRAYER_LABELS:
+            row = QHBoxLayout()
+            row.setSpacing(6)
+            lbl_p = QLabel(id_name)
+            lbl_p.setStyleSheet(
+                f"color: {th.MUTED}; font-size: 13px; min-width: 80px; background: transparent;"
+            )
+            edit = QLineEdit()
+            edit.setPlaceholderText("(gunakan suara global / default)")
+            edit.setReadOnly(True)
+            btn_br = QPushButton("Pilih File")
+            btn_br.setFixedWidth(80)
+            btn_br.setToolTip(f"Pilih file suara untuk {id_name}")
+            btn_br.clicked.connect(lambda _, e=edit, n=id_name: self._browse_prayer_sound(e, n))
+            btn_cl = QPushButton("Hapus")
+            btn_cl.setFixedWidth(70)
+            btn_cl.setToolTip("Hapus, gunakan suara global")
+            btn_cl.clicked.connect(lambda _, e=edit: e.clear())
+            row.addWidget(lbl_p)
+            row.addWidget(edit, 1)
+            row.addWidget(btn_br)
+            row.addWidget(btn_cl)
+            notif_card.body.addLayout(row)
+            self._prayer_sound_edits[en] = edit
+
+        notif_card.body.addLayout(
+            self._make_hint(
+                "Kosong = gunakan suara global di atas. "
+                "Letakkan adzan.wav di assets/sounds/ untuk fallback default."
+            )
+        )
+        root.addWidget(notif_card)
+
+        # ── Window behavior
+        win_card = SectionCard("🖥️  Jendela Aplikasi")
+        self._start_min_cb = QCheckBox("Mulai dalam kondisi diminimalkan")
+        self._start_min_cb.setStyleSheet("background: transparent;")
+        win_card.body.addWidget(self._start_min_cb)
+
+        self._tray_cb = QCheckBox("Minimize ke System Tray (bukan taskbar)")
+        self._tray_cb.setStyleSheet("background: transparent;")
+        win_card.body.addWidget(self._tray_cb)
+        root.addWidget(win_card)
+
+        # ── About
+        about_card = SectionCard("ℹ️  Tentang Aplikasi")
+
+        # App name + version
+        lbl_name = QLabel("Muslim Desk  v1.0.0")
+        lbl_name.setStyleSheet(
+            f"font-size: 16px; font-weight: 800; color: {th.ACCENT}; background: transparent;"
+        )
+        about_card.body.addWidget(lbl_name)
+
+        lbl_desc = QLabel("Aplikasi jadwal sholat 5 waktu untuk Windows 11.")
+        lbl_desc.setStyleSheet(f"color: {th.MUTED}; font-size: 13px; background: transparent;")
+        lbl_desc.setWordWrap(True)
+        about_card.body.addWidget(lbl_desc)
+
+        sep_about = QFrame()
+        sep_about.setFixedHeight(1)
+        sep_about.setStyleSheet(f"background: {th.BORDER}; margin: 8px 0;")
+        about_card.body.addWidget(sep_about)
+
+        # Developer row
+        dev_row = QHBoxLayout()
+        dev_row.setSpacing(12)
+        lbl_dev_key = QLabel("Developer")
+        lbl_dev_key.setStyleSheet(
+            f"color: {th.MUTED}; font-size: 12px; font-weight: 600; "
+            f"min-width: 120px; background: transparent;"
+        )
+        lbl_dev_val = QLabel("Ahmed Seko")
+        lbl_dev_val.setStyleSheet(
+            f"color: {th.HEADING}; font-size: 13px; font-weight: 700; background: transparent;"
+        )
+        dev_row.addWidget(lbl_dev_key)
+        dev_row.addWidget(lbl_dev_val)
+        dev_row.addStretch()
+        about_card.body.addLayout(dev_row)
+
+        # Tech stack rows
+        _info = [
+            ("Algoritma",      "PrayTimes.org"),
+            ("Kalender Hijriah", "Umm al-Qura / Tabular"),
+            ("Geolokasi",      "ip-api.com"),
+            ("Framework",      "PyQt6 (Python)"),
+        ]
+        for key, val in _info:
+            row = QHBoxLayout()
+            row.setSpacing(12)
+            k = QLabel(key)
+            k.setStyleSheet(
+                f"color: {th.MUTED}; font-size: 12px; font-weight: 600; "
+                f"min-width: 120px; background: transparent;"
+            )
+            v = QLabel(val)
+            v.setStyleSheet(f"color: {th.TEXT}; font-size: 13px; background: transparent;")
+            row.addWidget(k)
+            row.addWidget(v)
+            row.addStretch()
+            about_card.body.addLayout(row)
+
+        root.addWidget(about_card)
+
+        root.addStretch()
+
+        # Status
+        self._status = QLabel("")
+        self._status.setStyleSheet(f"font-size: 12px; color: {th.GOOD}; background: transparent;")
+        self._status.setAlignment(Qt.AlignmentFlag.AlignRight)
+        root.addWidget(self._status)
+
+    def _apply_time_format_live(self, index: int):
+        """Apply time format immediately when combo changes — no Save needed."""
+        fmt_keys = ["24h", "12h"]
+        if index < 0 or index >= len(fmt_keys):
+            return
+        self._win.settings.time_format = fmt_keys[index]
+        if hasattr(self._win._dash, "refresh"):
+            self._win._dash.refresh()
+
+    # ─── city search ─────────────────────────────────────────────────────────
+
+    def _open_city_search(self):
+        from ..widgets import CitySearchDialog
+        dlg = CitySearchDialog(self)
+        dlg.location_selected.connect(self._apply_city_location)
+        dlg.exec()
+
+    def _apply_city_location(self, loc):
+        self._lat_spin.setValue(loc.latitude)
+        self._lon_spin.setValue(loc.longitude)
+        self._tz_spin.setValue(loc.timezone)
+        self._city_edit.setText(loc.city)
+        self._country_edit.setText(loc.country)
+        self._auto_loc_cb.setChecked(False)
+        self._on_auto_loc_changed(0)
+        self._status.setText(f"✅ Lokasi diset ke: {loc.city}, {loc.country}")
+
+    # ─── helpers ─────────────────────────────────────────────────────────────
+
+    def _add_combo(self, card: SectionCard, label: str,
+                   keys: list[str], names: list[str]) -> QComboBox:
+        row = QHBoxLayout()
+        lbl = QLabel(label)
+        lbl.setStyleSheet(f"color: {th.MUTED}; min-width: 180px; background: transparent;")
+        combo = QComboBox()
+        for name in names:
+            combo.addItem(name)
+        row.addWidget(lbl)
+        row.addWidget(combo, 1)
+        card.body.addLayout(row)
+        combo._keys = keys
+        return combo
+
+    def _add_double_spin(self, card: SectionCard, label: str,
+                         min_val: float, max_val: float, decimals: int) -> QDoubleSpinBox:
+        row = QHBoxLayout()
+        lbl = QLabel(label)
+        lbl.setStyleSheet(f"color: {th.MUTED}; min-width: 180px; background: transparent;")
+        spin = QDoubleSpinBox()
+        spin.setRange(min_val, max_val)
+        spin.setDecimals(decimals)
+        spin.setSingleStep(0.1 if decimals > 0 else 1.0)
+        row.addWidget(lbl)
+        row.addWidget(spin, 1)
+        card.body.addLayout(row)
+        return spin
+
+    def _add_lineedit(self, card: SectionCard, label: str) -> QLineEdit:
+        row = QHBoxLayout()
+        lbl = QLabel(label)
+        lbl.setStyleSheet(f"color: {th.MUTED}; min-width: 180px; background: transparent;")
+        edit = QLineEdit()
+        row.addWidget(lbl)
+        row.addWidget(edit, 1)
+        card.body.addLayout(row)
+        return edit
+
+    def _make_hint(self, text: str) -> QHBoxLayout:
+        row = QHBoxLayout()
+        lbl = QLabel(f"ℹ️  {text}")
+        lbl.setStyleSheet(f"color: {th.MUTED}; font-size: 12px; background: transparent;")
+        lbl.setWordWrap(True)
+        row.addWidget(lbl)
+        return row
+
+    def _on_auto_loc_changed(self, state):
+        manual = (state == 0)
+        for w in (self._lat_spin, self._lon_spin, self._tz_spin,
+                  self._alt_spin, self._city_edit, self._country_edit):
+            w.setEnabled(manual)
+
+    def _browse_sound(self):
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Pilih File Suara Adzan", "",
+            "Audio WAV (*.wav);;Semua File (*.*)"
+        )
+        if path:
+            self._sound_path.setText(path)
+
+    def _browse_prayer_sound(self, edit: QLineEdit, prayer_name: str):
+        path, _ = QFileDialog.getOpenFileName(
+            self, f"Pilih Suara Adzan — {prayer_name}", "",
+            "Audio WAV (*.wav);;Semua File (*.*)"
+        )
+        if path:
+            edit.setText(path)
+
+    # ─── load / save ─────────────────────────────────────────────────────────
+
+    def refresh(self):
+        s = self._win.settings
+
+        # Theme
+        theme_keys = ["dark", "light", "system"]
+        idx = theme_keys.index(s.theme) if s.theme in theme_keys else 0
+        self._theme_combo.setCurrentIndex(idx)
+
+        # Time format
+        fmt_keys = ["24h", "12h"]
+        self._time_fmt_combo.setCurrentIndex(fmt_keys.index(s.time_format) if s.time_format in fmt_keys else 0)
+
+        # Method
+        method_keys = list(pc.METHODS.keys())
+        midx = method_keys.index(s.method) if s.method in method_keys else 0
+        self._method_combo.setCurrentIndex(midx)
+
+        # Asr
+        self._asr_combo.setCurrentIndex(max(0, s.asr_method - 1))
+
+        # Location
+        self._auto_loc_cb.setChecked(s.auto_location)
+        self._lat_spin.setValue(s.latitude)
+        self._lon_spin.setValue(s.longitude)
+        self._tz_spin.setValue(s.timezone)
+        self._alt_spin.setValue(s.altitude)
+        self._city_edit.setText(s.city)
+        self._country_edit.setText(s.country)
+        self._on_auto_loc_changed(2 if s.auto_location else 0)
+
+        # Notification
+        self._notif_cb.setChecked(s.notification_enabled)
+        self._sound_cb.setChecked(s.sound_enabled)
+        self._sound_path.setText(s.custom_sound_path)
+
+        reminder_keys = ["0", "5", "10", "15"]
+        ridx = reminder_keys.index(str(s.reminder_minutes)) if str(s.reminder_minutes) in reminder_keys else 1
+        self._reminder_combo.setCurrentIndex(ridx)
+
+        for en, edit in self._prayer_sound_edits.items():
+            edit.setText(s.prayer_sounds.get(en, ""))
+
+        # Window
+        self._start_min_cb.setChecked(s.start_minimized)
+        self._tray_cb.setChecked(s.minimize_to_tray)
+
+        self._status.setText("")
+
+    def _save(self):
+        s = self._win.settings
+        old_theme = s.theme
+
+        # Theme
+        theme_keys = self._theme_combo._keys
+        s.theme = theme_keys[self._theme_combo.currentIndex()]
+
+        # Time format (hardcoded keys — more robust than ._keys attribute)
+        _fmt_keys = ["24h", "12h"]
+        _fi = self._time_fmt_combo.currentIndex()
+        s.time_format = _fmt_keys[_fi] if 0 <= _fi < len(_fmt_keys) else "24h"
+
+        # Method
+        method_keys = self._method_combo._keys
+        s.method     = method_keys[self._method_combo.currentIndex()]
+        s.asr_method = self._asr_combo.currentIndex() + 1
+
+        # Location
+        s.auto_location = self._auto_loc_cb.isChecked()
+        s.latitude      = self._lat_spin.value()
+        s.longitude     = self._lon_spin.value()
+        s.timezone      = self._tz_spin.value()
+        s.altitude      = self._alt_spin.value()
+        s.city          = self._city_edit.text().strip()
+        s.country       = self._country_edit.text().strip()
+
+        # Notification
+        s.notification_enabled = self._notif_cb.isChecked()
+        s.sound_enabled        = self._sound_cb.isChecked()
+        s.custom_sound_path    = self._sound_path.text().strip()
+
+        reminder_keys = self._reminder_combo._keys
+        s.reminder_minutes = int(reminder_keys[self._reminder_combo.currentIndex()])
+
+        for en, edit in self._prayer_sound_edits.items():
+            s.prayer_sounds[en] = edit.text().strip()
+
+        # Window
+        s.start_minimized  = self._start_min_cb.isChecked()
+        s.minimize_to_tray = self._tray_cb.isChecked()
+
+        self._win.on_settings_changed()
+
+        # Apply theme live if changed
+        if s.theme != old_theme:
+            self._win.apply_theme_live(s.theme)
+
+        self._status.setText("✅ Pengaturan berhasil disimpan.")

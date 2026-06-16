@@ -31,6 +31,11 @@ MANIFEST
 #   before PyInstaller builds the exe, so as to inject date/other infos into it.
 *.manifest
 *.spec
+!muslim_desk.spec
+
+# Muslim Desk — build artifacts & dev files
+release/
+screenshot*.png
 
 # Installer logs
 pip-log.txt
