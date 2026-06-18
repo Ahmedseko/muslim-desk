@@ -1,13 +1,15 @@
 """Main application window: sidebar + stacked pages + system tray."""
 from __future__ import annotations
 
+import threading
 from datetime import datetime, timedelta
 
-from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QObject
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QHBoxLayout, QVBoxLayout,
                               QLabel, QFrame, QStackedWidget, QSystemTrayIcon,
-                              QMenu, QApplication)
-from PyQt6.QtGui import QAction
+                              QMenu, QApplication, QPushButton)
+from PyQt6.QtGui import QAction, QDesktopServices
+from PyQt6.QtCore import QUrl
 
 from . import theme as th
 from .widgets import NavButton, make_app_icon
@@ -26,6 +28,10 @@ _MENU_DEF = [
     ("🧭", "nav_qibla",      "Qibla"),
     ("⚙️", "nav_settings",   "Settings"),
 ]
+
+
+class _UpdateSignal(QObject):
+    found = pyqtSignal(str, str)   # (version, url)
 
 
 class MainWindow(QMainWindow):
@@ -61,6 +67,8 @@ class MainWindow(QMainWindow):
         self._check_timer.start(30_000)
         self._check_prayers()
 
+        # Check for update in background (delay 3s so UI loads first)
+        QTimer.singleShot(3000, self._start_update_check)
 
     # ─── tray ────────────────────────────────────────────────────────────────
 
@@ -140,7 +148,7 @@ class MainWindow(QMainWindow):
         bl.addStretch()
         sl.addWidget(brand)
 
-        # Nav buttons — use the page key (3rd element) not the display label
+        # Nav buttons
         self._nav_buttons: list[NavButton] = []
         for icon_char, label_key, page_key in _MENU_DEF:
             btn = NavButton(icon_char, t(label_key))
@@ -162,9 +170,20 @@ class MainWindow(QMainWindow):
 
         root.addWidget(side)
 
-        # ── Stacked pages
+        # ── Right column: update banner (hidden) + stacked pages
+        right_col = QVBoxLayout()
+        right_col.setContentsMargins(0, 0, 0, 0)
+        right_col.setSpacing(0)
+
+        # Update banner — hidden until update found
+        self._update_bar = self._make_update_bar()
+        self._update_bar.hide()
+        right_col.addWidget(self._update_bar)
+
         self.stack = QStackedWidget()
-        root.addWidget(self.stack, 1)
+        right_col.addWidget(self.stack, 1)
+
+        root.addLayout(right_col, 1)
 
         self._pages: dict[str, QWidget] = {}
         self._dash  = DashboardPage(self)
@@ -178,6 +197,63 @@ class MainWindow(QMainWindow):
             self.stack.addWidget(page)
 
         self._on_nav("Dashboard")
+
+    def _make_update_bar(self) -> QFrame:
+        bar = QFrame()
+        bar.setObjectName("UpdateBar")
+        bar.setStyleSheet(
+            f"QFrame#UpdateBar {{ background: {th.SURFACE}; "
+            f"border-bottom: 1px solid {th.ACCENT_DK}; "
+            f"border-left: 4px solid {th.ACCENT}; }}"
+        )
+        bar.setFixedHeight(46)
+
+        layout = QHBoxLayout(bar)
+        layout.setContentsMargins(16, 0, 12, 0)
+        layout.setSpacing(12)
+
+        self._update_lbl = QLabel("")
+        self._update_lbl.setStyleSheet(
+            f"color: {th.TEXT}; font-size: 13px; background: transparent;"
+        )
+        layout.addWidget(self._update_lbl, 1)
+
+        btn_dl = QPushButton(t("update_download"))
+        btn_dl.setObjectName("Primary")
+        btn_dl.setFixedHeight(28)
+        btn_dl.clicked.connect(self._open_download)
+        layout.addWidget(btn_dl)
+
+        btn_dismiss = QPushButton(t("update_later"))
+        btn_dismiss.setFixedHeight(28)
+        btn_dismiss.clicked.connect(self._update_bar.hide)
+        layout.addWidget(btn_dismiss)
+
+        self._update_url = ""
+        return bar
+
+    # ─── auto-update ─────────────────────────────────────────────────────────
+
+    def _start_update_check(self):
+        self._update_sig = _UpdateSignal()
+        self._update_sig.found.connect(self._on_update_found)
+        threading.Thread(target=self._update_thread, daemon=True).start()
+
+    def _update_thread(self):
+        from ..core.updater import check_for_update
+        result = check_for_update(VERSION)
+        if result:
+            version, url = result
+            self._update_sig.found.emit(version, url)
+
+    def _on_update_found(self, version: str, url: str):
+        self._update_url = url
+        self._update_lbl.setText(t("update_available", version))
+        self._update_bar.show()
+
+    def _open_download(self):
+        if self._update_url:
+            QDesktopServices.openUrl(QUrl(self._update_url))
 
     # ─── navigation ──────────────────────────────────────────────────────────
 
@@ -254,7 +330,7 @@ class MainWindow(QMainWindow):
                 self._triggered.add(key)
                 self._fire_prayer_alert(name, dt.strftime("%H:%M"))
 
-        # Reset trigger set at midnight (using app timezone)
+        # Reset trigger set at midnight
         if now.hour == 0 and now.minute == 0:
             self._triggered = {k for k in self._triggered if str(today) in k}
 
@@ -264,18 +340,16 @@ class MainWindow(QMainWindow):
         dlg = PrayerAlertDialog(name_id, prayer_en, time_str, self)
         dlg.remind_requested.connect(lambda m, n=prayer_en, t=time_str: self._schedule_reminder(n, t, m))
 
-        # Auto-close dialog when adzan finishes
         def _on_sound_done():
             try:
                 if dlg and not dlg.isHidden():
                     dlg.accept()
             except RuntimeError:
-                pass  # dialog already destroyed
+                pass
 
         self._notif.sound_finished.connect(_on_sound_done)
 
         def _on_dialog_closed():
-            # Stop adzan sound and disconnect auto-close signal
             self._notif.stop_sound()
             try:
                 self._notif.sound_finished.disconnect(_on_sound_done)

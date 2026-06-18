@@ -162,6 +162,12 @@ _STRINGS: dict[str, dict[str, str]] = {
     "about_fw":           {"id": "Framework",                      "en": "Framework"},
     "hint_theme_save":    {"id": "Perubahan tema diterapkan setelah disimpan.", "en": "Theme changes apply after saving."},
 
+    # ── Auto-update banner ────────────────────────────────────────────────────
+    "update_available": {"id": "🔔  Versi baru tersedia: v{}  —  Unduh sekarang untuk mendapatkan fitur terbaru.",
+                         "en": "🔔  New version available: v{}  —  Download now to get the latest features."},
+    "update_download":  {"id": "Unduh",  "en": "Download"},
+    "update_later":     {"id": "Nanti",  "en": "Later"},
+
     # ── City search dialog ────────────────────────────────────────────────────
     "city_search_win_title":  {"id": "Cari Kota / Lokasi",         "en": "Search City / Location"},
     "city_search_title":      {"id": "🔍  Cari Kota / Lokasi",     "en": "🔍  Search City / Location"},
