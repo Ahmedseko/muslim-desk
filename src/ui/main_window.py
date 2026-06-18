@@ -215,10 +215,6 @@ class MainWindow(QMainWindow):
         QApplication.instance().setStyleSheet(th.STYLESHEET)
         self._rebuild_ui()
 
-    def apply_language_live(self):
-        """Rebuild UI after language change (no theme change needed)."""
-        self._rebuild_ui()
-
     def _rebuild_ui(self):
         current = next((k for i, (_, _, k) in enumerate(_MENU_DEF)
                         if self._nav_buttons[i].isChecked()), "Dashboard")

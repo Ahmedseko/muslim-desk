@@ -300,6 +300,15 @@ class SettingsPage(QWidget):
         self._status.setAlignment(Qt.AlignmentFlag.AlignRight)
         root.addWidget(self._status)
 
+    def _restart_app(self):
+        """Save current settings then relaunch the executable."""
+        import sys
+        from PyQt6.QtCore import QProcess
+        from PyQt6.QtWidgets import QApplication
+        # Relaunch the same executable (works both in source and PyInstaller)
+        QProcess.startDetached(sys.executable, [])
+        QApplication.quit()
+
     def _on_startup_changed(self, state: int):
         from ...data.settings_manager import set_startup_enabled
         enabled = (state == 2)  # Qt.CheckState.Checked
@@ -524,12 +533,11 @@ class SettingsPage(QWidget):
         set_language(s.language)
 
         if s.theme != old_theme:
-            # Theme changed → full rebuild (language is already set above)
             self._win.apply_theme_live(s.theme)
         elif s.language != old_lang:
-            # Only language changed → rebuild UI
-            self._win.apply_language_live()
-            return  # page is recreated; don't touch self afterwards
+            # Language changed → restart app so all labels rebuild cleanly
+            self._restart_app()
+            return
         else:
             if hasattr(self._win, "_dash") and hasattr(self._win._dash, "refresh"):
                 self._win._dash.refresh()
