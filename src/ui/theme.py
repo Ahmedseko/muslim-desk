@@ -43,18 +43,18 @@ PALETTES: dict[str, dict[str, str]] = {
         "DANGER_BG":  "#7f1d1d",
     },
     "light": {
-        "BG":         "#f6f8fa",
-        "SURFACE":    "#ffffff",
-        "SURFACE_2":  "#eef2f6",
-        "BORDER":     "#d0d7de",
-        "TEXT":       "#1f2328",
-        "MUTED":      "#656d76",
+        "BG":         "#f2fbf4",   # very faint mint instead of plain grey
+        "SURFACE":    "#ffffff",   # pure white cards
+        "SURFACE_2":  "#e6f4ea",   # soft green tint instead of grey
+        "BORDER":     "#b8dfc0",   # green-tinted border instead of grey
+        "TEXT":       "#1a2e1c",   # dark with subtle green
+        "MUTED":      "#5a7360",   # green-grey muted instead of plain grey
         "ACCENT":     "#16a34a",
         "ACCENT_DK":  "#15803d",
-        "HEADING":    "#0d1117",
-        "BTN_HOVER":  "#e8ecf0",
-        "BTN_PRESSED":"#d0d7de",
-        "SCROLL_HOVER":"#c1c9d2",
+        "HEADING":    "#0d1f0f",   # very dark green-black
+        "BTN_HOVER":  "#d4edda",   # light green hover instead of grey
+        "BTN_PRESSED":"#b8dfc0",   # green pressed
+        "SCROLL_HOVER":"#8ec99a",  # green scroll bar
         "DANGER_BG":  "#b91c1c",
     },
 }
@@ -155,17 +155,18 @@ QPushButton#AlarmOn {{
 }}
 QPushButton#AlarmOn:hover {{ background: {ACCENT}; }}
 QPushButton#AlarmOff {{
-    background: {SURFACE_2}; border: 1px solid {BORDER}; border-radius: 6px;
+    background: transparent; border: 1px solid {BORDER}; border-radius: 6px;
     color: {MUTED}; font-size: 12px; padding: 4px 10px;
 }}
 QPushButton#AlarmOff:hover {{ background: {BTN_HOVER}; }}
 
 /* Dzikir counter button */
 QPushButton#DzikirBtn {{
-    background: {SURFACE_2}; border: 2px solid {BORDER}; border-radius: 12px;
-    padding: 16px; color: {ACCENT}; font-size: {fs + 4}px; font-weight: 700;
+    background: rgba(22,163,74,0.09); border: 2px solid rgba(22,163,74,0.30);
+    border-radius: 12px; padding: 16px; color: {ACCENT};
+    font-size: {fs + 4}px; font-weight: 700;
 }}
-QPushButton#DzikirBtn:hover {{ background: {BTN_HOVER}; border-color: {ACCENT}; }}
+QPushButton#DzikirBtn:hover {{ background: rgba(22,163,74,0.18); border-color: {ACCENT}; }}
 QPushButton#DzikirBtn:pressed {{ background: {ACCENT_DK}; color: #ffffff; }}
 QPushButton#DzikirDone {{
     background: {ACCENT_DK}; border: none; border-radius: 12px;
