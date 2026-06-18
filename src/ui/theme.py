@@ -7,6 +7,7 @@ from __future__ import annotations
 # ---- shared semantic colours (cross-theme) --------------------------------
 FAJR_COLOR    = "#818cf8"   # indigo   – pre-dawn
 SUNRISE_COLOR = "#f59e0b"   # amber    – sunrise
+DHUHA_COLOR   = "#fde047"   # yellow   – mid-morning
 DHUHR_COLOR   = "#22c55e"   # green    – midday
 ASR_COLOR     = "#38bdf8"   # sky      – afternoon
 MAGHRIB_COLOR = "#f97316"   # orange   – sunset
@@ -18,6 +19,7 @@ DANGER        = "#ef4444"
 PRAYER_COLORS = {
     "Fajr":    FAJR_COLOR,
     "Sunrise": SUNRISE_COLOR,
+    "Dhuha":   DHUHA_COLOR,
     "Dhuhr":   DHUHR_COLOR,
     "Asr":     ASR_COLOR,
     "Maghrib": MAGHRIB_COLOR,

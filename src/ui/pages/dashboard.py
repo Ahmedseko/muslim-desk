@@ -543,6 +543,23 @@ class DashboardPage(QWidget):
         self._btn_month.setStyleSheet(active_style if mode == "month" else inactive_style)
         self._refresh_weekly_schedule()
 
+    @staticmethod
+    def _calc_dhuha(times: dict) -> str:
+        """Dhuha = Sunrise + (Dhuhr - Sunrise) / 4  (quarter-day formula)."""
+        try:
+            sr = times.get("Sunrise", "")
+            dh = times.get("Dhuhr", "")
+            if not sr or not dh:
+                return "--:--"
+            sr_h, sr_m = map(int, sr.split(":"))
+            dh_h, dh_m = map(int, dh.split(":"))
+            sr_mins = sr_h * 60 + sr_m
+            dh_mins = dh_h * 60 + dh_m
+            duha = sr_mins + (dh_mins - sr_mins) // 4
+            return f"{duha // 60:02d}:{duha % 60:02d}"
+        except Exception:
+            return "--:--"
+
     def _refresh_weekly_schedule(self):
         if not hasattr(self, "_schedule_grid_layout"):
             return
@@ -562,36 +579,30 @@ class DashboardPage(QWidget):
         if self._schedule_mode == "7days":
             days = [today + timedelta(days=i) for i in range(7)]
         else:
-            # All days of current month
             year, month = today.year, today.month
             _, days_in_month = calendar.monthrange(year, month)
             days = [date(year, month, d) for d in range(1, days_in_month + 1)]
 
-        # Header row
+        # 6 prayer columns: Fajr, Dhuha, Dhuhr, Asr, Maghrib, Isha
+        PKEY = ["Fajr", "Dhuha", "Dhuhr", "Asr", "Maghrib", "Isha"]
+        PCOL = [
+            th.PRAYER_COLORS["Fajr"],    th.PRAYER_COLORS["Dhuha"],
+            th.PRAYER_COLORS["Dhuhr"],   th.PRAYER_COLORS["Asr"],
+            th.PRAYER_COLORS["Maghrib"], th.PRAYER_COLORS["Isha"],
+        ]
+
         grid_widget = QWidget()
         grid_widget.setStyleSheet("background: transparent;")
         grid = QGridLayout(grid_widget)
         grid.setVerticalSpacing(0)
-        grid.setHorizontalSpacing(4)
+        grid.setHorizontalSpacing(2)
         grid.setContentsMargins(0, 0, 0, 0)
-        grid.setColumnStretch(0, 42)
-        for c in range(1, 6):
-            grid.setColumnStretch(c, 12)
+        grid.setColumnStretch(0, 36)
+        for c in range(1, 7):
+            grid.setColumnStretch(c, 11)
 
-        PCOL = [
-            th.PRAYER_COLORS["Fajr"], th.PRAYER_COLORS["Dhuhr"],
-            th.PRAYER_COLORS["Asr"], th.PRAYER_COLORS["Maghrib"],
-            th.PRAYER_COLORS["Isha"],
-        ]
-        PKEY = ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"]
-
-        hdrs = [
-            (t("weekly_col_date"),   th.MUTED),
-            (_prayer_name("Fajr"),   PCOL[0]),
-            (_prayer_name("Dhuhr"),  PCOL[1]),
-            (_prayer_name("Asr"),    PCOL[2]),
-            (_prayer_name("Maghrib"),PCOL[3]),
-            (_prayer_name("Isha"),   PCOL[4]),
+        hdrs = [(t("weekly_col_date"), th.MUTED)] + [
+            (_prayer_name(k), PCOL[i]) for i, k in enumerate(PKEY)
         ]
         for col, (h, c) in enumerate(hdrs):
             lbl = QLabel(h)
@@ -605,20 +616,20 @@ class DashboardPage(QWidget):
         sep = QFrame()
         sep.setFixedHeight(1)
         sep.setStyleSheet(f"background: {th.BORDER};")
-        grid.addWidget(sep, 1, 0, 1, 6)
+        grid.addWidget(sep, 1, 0, 1, 7)
 
         for row_idx, d in enumerate(days):
             is_today  = (d == today)
             is_friday = (d.weekday() == 4)
 
-            bg    = f"background: {th.SURFACE_2}; border-radius: 4px;" if is_today else "background: transparent;"
-            dcol  = th.ACCENT if is_today else ("#38bdf8" if is_friday else th.MUTED)
-            fw    = "700" if is_today else "500"
+            bg   = f"background: {th.SURFACE_2}; border-radius: 4px;" if is_today else "background: transparent;"
+            dcol = th.ACCENT if is_today else ("#38bdf8" if is_friday else th.MUTED)
+            fw   = "700" if is_today else "500"
 
             date_txt = f"{_day_name(d.weekday(), short=True)}, {d.day} {_month_name(d.month, short=True)}"
             dlbl = QLabel(date_txt)
             dlbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            dlbl.setStyleSheet(f"color: {dcol}; font-size: 12px; font-weight: {fw}; padding: 4px 6px; {bg}")
+            dlbl.setStyleSheet(f"color: {dcol}; font-size: 11px; font-weight: {fw}; padding: 4px 4px; {bg}")
             grid.addWidget(dlbl, row_idx + 2, 0)
 
             try:
@@ -626,18 +637,19 @@ class DashboardPage(QWidget):
                     d, s.latitude, s.longitude, s.timezone,
                     s.method, s.asr_method, s.altitude,
                 )
+                times["Dhuha"] = self._calc_dhuha(times)
                 for col_idx, (key, color) in enumerate(zip(PKEY, PCOL)):
                     lbl = QLabel(_fmt_time(times.get(key, "--:--"), tfmt))
                     lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
                     lbl.setStyleSheet(
-                        f"color: {color}; font-size: 12px; font-weight: {fw}; padding: 4px 2px; {bg}"
+                        f"color: {color}; font-size: 11px; font-weight: {fw}; padding: 4px 1px; {bg}"
                     )
                     grid.addWidget(lbl, row_idx + 2, col_idx + 1)
             except Exception:
-                for col_idx in range(5):
+                for col_idx in range(6):
                     lbl = QLabel("--")
                     lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                    lbl.setStyleSheet(f"color: {th.MUTED}; font-size: 12px; padding: 4px 2px; {bg}")
+                    lbl.setStyleSheet(f"color: {th.MUTED}; font-size: 11px; padding: 4px 1px; {bg}")
                     grid.addWidget(lbl, row_idx + 2, col_idx + 1)
 
         self._schedule_grid_layout.addWidget(grid_widget)
@@ -657,15 +669,15 @@ class DashboardPage(QWidget):
         self._hijri_month_lbl = QLabel("—")
         self._hijri_month_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._hijri_month_lbl.setStyleSheet(
-            f"color: {th.ACCENT}; font-size: 13px; font-weight: 700; "
-            f"background: transparent; margin-bottom: 4px;"
+            f"color: {th.ACCENT}; font-size: 15px; font-weight: 700; "
+            f"background: transparent; margin-bottom: 6px;"
         )
         card.body.addWidget(self._hijri_month_lbl)
 
         self._hijri_grid_widget = QFrame()
         self._hijri_grid_widget.setStyleSheet("background: transparent;")
         self._hijri_grid = QGridLayout(self._hijri_grid_widget)
-        self._hijri_grid.setSpacing(2)
+        self._hijri_grid.setSpacing(4)
         self._hijri_grid.setContentsMargins(0, 0, 0, 0)
         card.body.addWidget(self._hijri_grid_widget)
 
@@ -686,21 +698,19 @@ class DashboardPage(QWidget):
 
         self._ayyamul_lbl = QLabel("")
         self._ayyamul_lbl.setStyleSheet(
-            f"color: {th.TEXT}; font-size: 11px; "
-            f"background: transparent; margin-top: 6px;"
+            f"color: {th.TEXT}; font-size: 12px; "
+            f"background: transparent; margin-top: 8px;"
         )
         self._ayyamul_lbl.setWordWrap(True)
         card.body.addWidget(self._ayyamul_lbl)
 
         self._event_lbl = QLabel("")
         self._event_lbl.setStyleSheet(
-            f"color: #a78bfa; font-size: 11px; font-weight: 600; "
+            f"color: #a78bfa; font-size: 12px; font-weight: 600; "
             f"background: transparent; margin-top: 2px;"
         )
         self._event_lbl.setWordWrap(True)
         card.body.addWidget(self._event_lbl)
-
-        card.body.addStretch()
 
         from PyQt6.QtWidgets import QSizePolicy
         card.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
@@ -736,7 +746,7 @@ class DashboardPage(QWidget):
             lbl = QLabel(d)
             lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
             lbl.setStyleSheet(
-                f"color: {c}; font-size: 10px; font-weight: 700; background: transparent;"
+                f"color: {c}; font-size: 12px; font-weight: 700; background: transparent;"
             )
             self._hijri_grid.addWidget(lbl, 0, col)
 
@@ -757,7 +767,7 @@ class DashboardPage(QWidget):
             is_event   = bool(event_name)
 
             cell = QFrame()
-            cell.setFixedSize(30, 26)
+            cell.setFixedSize(38, 32)
 
             if is_today:
                 cell.setStyleSheet(f"background: {th.ACCENT_DK}; border-radius: 5px;")
@@ -789,7 +799,7 @@ class DashboardPage(QWidget):
             n = QLabel(str(hij_d))
             n.setAlignment(Qt.AlignmentFlag.AlignCenter)
             n.setStyleSheet(
-                f"color: {fg}; font-size: 11px; font-weight: {fw}; background: transparent;"
+                f"color: {fg}; font-size: 13px; font-weight: {fw}; background: transparent;"
             )
             cl.addWidget(n)
             self._hijri_grid.addWidget(cell, row, col, Qt.AlignmentFlag.AlignCenter)

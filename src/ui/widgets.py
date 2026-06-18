@@ -666,7 +666,7 @@ class SectionCard(QFrame):
 
         self._body = QVBoxLayout()
         self._body.setSpacing(8)
-        root.addLayout(self._body)
+        root.addLayout(self._body, 1)  # stretch=1 → body fills card height
 
     @property
     def body(self) -> QVBoxLayout:

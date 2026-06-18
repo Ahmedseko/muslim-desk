@@ -10,6 +10,7 @@ _STRINGS: dict[str, dict[str, str]] = {
     # ── Prayer names ─────────────────────────────────────────────────────────
     "prayer_fajr":    {"id": "Subuh",    "en": "Fajr"},
     "prayer_sunrise": {"id": "Syuruk",   "en": "Sunrise"},
+    "prayer_dhuha":   {"id": "Dhuha",    "en": "Dhuha"},
     "prayer_dhuhr":   {"id": "Dzuhur",   "en": "Dhuhr"},
     "prayer_asr":     {"id": "Ashar",    "en": "Asr"},
     "prayer_maghrib": {"id": "Maghrib",  "en": "Maghrib"},
@@ -372,6 +373,7 @@ def prayer_name(prayer_en: str) -> str:
     _map = {
         "Fajr":    "prayer_fajr",
         "Sunrise": "prayer_sunrise",
+        "Dhuha":   "prayer_dhuha",
         "Dhuhr":   "prayer_dhuhr",
         "Asr":     "prayer_asr",
         "Maghrib": "prayer_maghrib",
