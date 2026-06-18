@@ -1,15 +1,14 @@
-"""Windows prayer-time notification & alarm manager."""
+"""Prayer-time notification & alarm manager — QMediaPlayer (MP3+WAV) + winotify toast."""
 from __future__ import annotations
 
-import os
+import sys
 import threading
-import winsound
 from pathlib import Path
 
-from PyQt6.QtCore import QObject, pyqtSignal, QTimer
+from PyQt6.QtCore import QObject, pyqtSignal, QTimer, QUrl
+from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel,
                               QPushButton, QFrame)
-from PyQt6.QtGui import QFont
 from PyQt6.QtCore import Qt
 
 
@@ -25,44 +24,75 @@ class NotificationManager(QObject):
         self.sound_enabled: bool = True
         self.custom_sound_path: str = ""
         self.prayer_sounds: dict[str, str] = {}
-        self._playing = False
+        self.toast_enabled: bool = True
+
+        # Qt multimedia player (runs on main thread, async)
+        self._player = QMediaPlayer(self)
+        self._audio_out = QAudioOutput(self)
+        self._player.setAudioOutput(self._audio_out)
+        self._player.playbackStateChanged.connect(self._on_playback_state)
+        self._expect_finish = False
+
+    def _on_playback_state(self, state: QMediaPlayer.PlaybackState):
+        if state == QMediaPlayer.PlaybackState.StoppedState and self._expect_finish:
+            self._expect_finish = False
+            self.sound_finished.emit()
 
     def play_adzan(self, prayer_name: str = ""):
         if not self.sound_enabled:
-            # no sound — emit immediately so dialog can start its fallback timer
             self.sound_finished.emit()
             return
-        threading.Thread(target=self._play_sound, args=(prayer_name,), daemon=True).start()
+        path = self._get_sound_path(prayer_name)
+        if path:
+            self._expect_finish = True
+            self._player.setSource(QUrl.fromLocalFile(path))
+            self._player.play()
+        else:
+            # No file found: system beep then done
+            self._system_beep()
+            self.sound_finished.emit()
 
-    def _play_sound(self, prayer_name: str = ""):
-        self._playing = True
-        try:
-            # 1. Per-prayer sound
-            per_prayer = self.prayer_sounds.get(prayer_name, "")
-            if per_prayer and Path(per_prayer).exists():
-                winsound.PlaySound(per_prayer, winsound.SND_FILENAME)
-                return
-            # 2. Global custom sound
-            if self.custom_sound_path and Path(self.custom_sound_path).exists():
-                winsound.PlaySound(self.custom_sound_path, winsound.SND_FILENAME)
-                return
-            # 3. Default sounds in assets/sounds/
-            for name in ("adzan.wav", "notification.wav"):
-                p = _SOUNDS_DIR / name
-                if p.exists():
-                    winsound.PlaySound(str(p), winsound.SND_FILENAME)
-                    return
-            # 4. Built-in Windows beep fallback
-            winsound.MessageBeep(winsound.MB_ICONEXCLAMATION)
-        except Exception:
-            pass
-        finally:
-            self._playing = False
-            self.sound_finished.emit()  # queued to main thread via AutoConnection
+    def _get_sound_path(self, prayer_name: str) -> str | None:
+        per = self.prayer_sounds.get(prayer_name, "")
+        if per and Path(per).exists():
+            return per
+        if self.custom_sound_path and Path(self.custom_sound_path).exists():
+            return self.custom_sound_path
+        for name in ("adzan.mp3", "adzan.wav", "notification.mp3", "notification.wav"):
+            p = _SOUNDS_DIR / name
+            if p.exists():
+                return str(p)
+        return None
+
+    def _system_beep(self):
+        if sys.platform == "win32":
+            try:
+                import winsound
+                winsound.MessageBeep(winsound.MB_ICONEXCLAMATION)
+            except Exception:
+                pass
 
     def stop_sound(self):
+        self._expect_finish = False
+        self._player.stop()
+
+    def show_toast(self, title: str, message: str):
+        """Show a Windows 10/11 toast notification (non-blocking background thread)."""
+        if not self.toast_enabled:
+            return
+        threading.Thread(target=self._toast_thread, args=(title, message), daemon=True).start()
+
+    def _toast_thread(self, title: str, message: str):
         try:
-            winsound.PlaySound(None, winsound.SND_PURGE)
+            from winotify import Notification, audio
+            toast = Notification(
+                app_id="Muslim Desk",
+                title=title,
+                msg=message,
+                duration="short",
+            )
+            toast.set_audio(audio.Default, loop=False)
+            toast.show()
         except Exception:
             pass
 
@@ -103,7 +133,6 @@ class PrayerAlertDialog(QDialog):
         root.setContentsMargins(28, 24, 28, 24)
         root.setSpacing(14)
 
-        # Icon + title row
         top = QHBoxLayout()
         top.setSpacing(12)
         moon = QLabel("🕌")
@@ -123,7 +152,6 @@ class PrayerAlertDialog(QDialog):
         top.addStretch()
         root.addLayout(top)
 
-        # Time
         lbl_time = QLabel(time_str)
         lbl_time.setStyleSheet(f"font-size: 20px; font-weight: 700;"
                                 f"color: {th.HEADING}; background: transparent;")
@@ -135,23 +163,19 @@ class PrayerAlertDialog(QDialog):
         sep.setStyleSheet(f"background: {th.BORDER};")
         root.addWidget(sep)
 
-        # Buttons
         btn_row = QHBoxLayout()
         btn_row.setSpacing(8)
-
         for mins in (5, 10, 15):
             b = QPushButton(_t("notif_remind", mins))
             b.setStyleSheet(f"""
                 QPushButton {{
                     background: {th.SURFACE_2}; border: 1px solid {th.BORDER};
-                    border-radius: 8px; padding: 8px 10px; font-size: 12px;
-                    color: {th.TEXT};
+                    border-radius: 8px; padding: 8px 10px; font-size: 12px; color: {th.TEXT};
                 }}
                 QPushButton:hover {{ background: {th.BTN_HOVER}; border-color: {th.ACCENT_DK}; }}
             """)
             b.clicked.connect(lambda _, m=mins: self._remind(m))
             btn_row.addWidget(b)
-
         root.addLayout(btn_row)
 
         btn_dismiss = QPushButton(_t("notif_close"))
@@ -172,12 +196,10 @@ class PrayerAlertDialog(QDialog):
 
     def showEvent(self, event):
         super().showEvent(event)
-        # Position bottom-right near taskbar
         from PyQt6.QtWidgets import QApplication
         screen = QApplication.primaryScreen().availableGeometry()
         self.move(screen.right() - self.width() - 24,
                   screen.bottom() - self.height() - 24)
-        # Fallback: auto-close after 15 minutes if sound signal never arrives
         self._fallback = QTimer(self)
         self._fallback.setSingleShot(True)
         self._fallback.timeout.connect(self.accept)

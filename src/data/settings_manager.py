@@ -1,10 +1,11 @@
 """Persistent settings stored in ~/.muslim_desk/settings.json."""
 from __future__ import annotations
 
+import sys
 import json
 from dataclasses import dataclass, asdict, field
 from pathlib import Path
-from typing import Dict
+from typing import Dict, List
 
 SETTINGS_PATH = Path.home() / ".muslim_desk" / "settings.json"
 _STARTUP_KEY  = r"Software\Microsoft\Windows\CurrentVersion\Run"
@@ -12,15 +13,17 @@ _STARTUP_NAME = "Muslim Desk"
 
 
 def set_startup_enabled(enabled: bool) -> bool:
-    """Add or remove the Windows startup registry entry."""
-    import sys, winreg
+    """Add or remove the Windows startup registry entry (Windows only)."""
+    if sys.platform != "win32":
+        return False
     try:
+        import winreg
         key = winreg.OpenKey(
             winreg.HKEY_CURRENT_USER, _STARTUP_KEY, 0,
             winreg.KEY_SET_VALUE,
         )
         if enabled:
-            exe = sys.executable  # correct when frozen by PyInstaller
+            exe = sys.executable
             winreg.SetValueEx(key, _STARTUP_NAME, 0, winreg.REG_SZ, f'"{exe}"')
         else:
             try:
@@ -35,8 +38,10 @@ def set_startup_enabled(enabled: bool) -> bool:
 
 def is_startup_enabled() -> bool:
     """Return True if app is registered to run at Windows startup."""
-    import winreg
+    if sys.platform != "win32":
+        return False
     try:
+        import winreg
         key = winreg.OpenKey(
             winreg.HKEY_CURRENT_USER, _STARTUP_KEY, 0,
             winreg.KEY_READ,
@@ -52,10 +57,12 @@ def is_startup_enabled() -> bool:
 class Settings:
     # Appearance
     theme: str = "dark"           # dark | light | system
+    font_size: int = 13           # 12 | 13 | 15 | 17
 
     # Prayer calculation
     method: str   = "MWL"
     asr_method: int = 1           # 1=Standard (Syafi'i), 2=Hanafi
+    imsak_minutes: int = 10       # 0=off, else N minutes before Fajr
 
     # Location
     latitude:       float = -6.2088
@@ -71,7 +78,8 @@ class Settings:
     notification_enabled: bool = True
     sound_enabled:        bool = True
     custom_sound_path:    str  = ""
-    reminder_minutes:     int  = 5     # 0=off, else N minutes before each prayer
+    reminder_minutes:     int  = 5
+    toast_enabled:        bool = True
 
     # Per-prayer alarm on/off (True = enabled)
     prayer_alarms: Dict[str, bool] = field(default_factory=lambda: {
@@ -103,6 +111,9 @@ class Settings:
     start_minimized: bool = False
     minimize_to_tray: bool = True
 
+    # Location profiles list: each item is a dict with location fields
+    profiles: List[dict] = field(default_factory=list)
+
 
 def load() -> Settings:
     try:
@@ -127,6 +138,9 @@ def load() -> Settings:
             sound_defaults = Settings().prayer_sounds
             for key, default_val in sound_defaults.items():
                 s.prayer_sounds.setdefault(key, default_val)
+            # ensure profiles is a list
+            if not isinstance(s.profiles, list):
+                s.profiles = []
             return s
     except Exception:
         pass

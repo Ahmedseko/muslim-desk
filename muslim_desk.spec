@@ -3,13 +3,14 @@
 
 import sys
 from pathlib import Path
-from PyInstaller.utils.hooks import collect_data_files
+from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
 block_cipher = None
 
 # Bundle timezonefinder boundary data + tzdata zone files
 _extra_datas = collect_data_files('timezonefinder')
 _extra_datas += collect_data_files('tzdata')
+
 
 a = Analysis(
     ['main.py'],
@@ -36,12 +37,15 @@ a = Analysis(
         'timezonefinder',
         'zoneinfo',
         'tzdata',
-        'winsound',
-        'winreg',
+        'PyQt6.QtMultimedia',
+        'winotify',
         'json',
         'dataclasses',
         'threading',
         'math',
+        'calendar',
+        'winsound',
+        'winreg',
     ],
     hookspath=[],
     hooksconfig={},

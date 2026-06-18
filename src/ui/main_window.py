@@ -16,6 +16,8 @@ from .widgets import NavButton, make_app_icon
 from .pages.dashboard import DashboardPage
 from .pages.qibla_page import QiblaPage
 from .pages.settings_page import SettingsPage
+from .pages.dzikir_page import DzikirPage
+from .pages.quran_page import QuranPage
 from ..data.settings_manager import Settings, save as save_settings
 from ..core.notification_manager import NotificationManager, PrayerAlertDialog
 from ..core import prayer_calculator as pc
@@ -26,6 +28,8 @@ from ..i18n import t, prayer_name as i18n_prayer_name
 _MENU_DEF = [
     ("🕌", "nav_dashboard",  "Dashboard"),
     ("🧭", "nav_qibla",      "Qibla"),
+    ("📿", "nav_dzikir",     "Dzikir"),
+    ("📖", "nav_quran",      "Quran"),
     ("⚙️", "nav_settings",   "Settings"),
 ]
 
@@ -45,11 +49,16 @@ class MainWindow(QMainWindow):
         self.resize(1100, 720)
         self.setMinimumSize(900, 600)
 
+        # Apply font size from saved settings
+        th.apply_font_size(settings.font_size)
+        QApplication.instance().setStyleSheet(th.STYLESHEET)
+
         # Notification manager
         self._notif = NotificationManager(self)
         self._notif.sound_enabled       = settings.sound_enabled
         self._notif.custom_sound_path   = settings.custom_sound_path
         self._notif.prayer_sounds       = dict(settings.prayer_sounds)
+        self._notif.toast_enabled       = settings.toast_enabled
 
         # Track which prayers already triggered today
         self._triggered: set[str] = set()
@@ -175,7 +184,6 @@ class MainWindow(QMainWindow):
         right_col.setContentsMargins(0, 0, 0, 0)
         right_col.setSpacing(0)
 
-        # Update banner — hidden until update found
         self._update_bar = self._make_update_bar()
         self._update_bar.hide()
         right_col.addWidget(self._update_bar)
@@ -186,13 +194,19 @@ class MainWindow(QMainWindow):
         root.addLayout(right_col, 1)
 
         self._pages: dict[str, QWidget] = {}
-        self._dash  = DashboardPage(self)
-        self._qibla = QiblaPage(self)
-        self._settings_page = SettingsPage(self)
+        self._dash           = DashboardPage(self)
+        self._qibla          = QiblaPage(self)
+        self._settings_page  = SettingsPage(self)
+        self._dzikir_page    = DzikirPage(self)
+        self._quran_page     = QuranPage(self)
 
-        for key, page in (("Dashboard", self._dash),
-                           ("Qibla",     self._qibla),
-                           ("Settings",  self._settings_page)):
+        for key, page in (
+            ("Dashboard", self._dash),
+            ("Qibla",     self._qibla),
+            ("Dzikir",    self._dzikir_page),
+            ("Quran",     self._quran_page),
+            ("Settings",  self._settings_page),
+        ):
             self._pages[key] = page
             self.stack.addWidget(page)
 
@@ -226,7 +240,7 @@ class MainWindow(QMainWindow):
 
         btn_dismiss = QPushButton(t("update_later"))
         btn_dismiss.setFixedHeight(28)
-        btn_dismiss.clicked.connect(self._update_bar.hide)
+        btn_dismiss.clicked.connect(bar.hide)
         layout.addWidget(btn_dismiss)
 
         self._update_url = ""
@@ -278,6 +292,7 @@ class MainWindow(QMainWindow):
         self._notif.sound_enabled     = self.settings.sound_enabled
         self._notif.custom_sound_path = self.settings.custom_sound_path
         self._notif.prayer_sounds     = dict(self.settings.prayer_sounds)
+        self._notif.toast_enabled     = self.settings.toast_enabled
         if hasattr(self._dash, "refresh"):
             self._dash.refresh()
         if hasattr(self._qibla, "refresh"):
@@ -287,7 +302,7 @@ class MainWindow(QMainWindow):
         actual = theme_name
         if theme_name == "system":
             actual = th.resolve_system_theme()
-        th.apply_theme(actual)
+        th.apply_theme(actual, font_size=self.settings.font_size)
         QApplication.instance().setStyleSheet(th.STYLESHEET)
         self._rebuild_ui()
 
@@ -330,7 +345,6 @@ class MainWindow(QMainWindow):
                 self._triggered.add(key)
                 self._fire_prayer_alert(name, dt.strftime("%H:%M"))
 
-        # Reset trigger set at midnight
         if now.hour == 0 and now.minute == 0:
             self._triggered = {k for k in self._triggered if str(today) in k}
 
@@ -338,7 +352,7 @@ class MainWindow(QMainWindow):
         name_id = i18n_prayer_name(prayer_en) or pc.PRAYER_NAMES_ID.get(prayer_en, prayer_en)
 
         dlg = PrayerAlertDialog(name_id, prayer_en, time_str, self)
-        dlg.remind_requested.connect(lambda m, n=prayer_en, t=time_str: self._schedule_reminder(n, t, m))
+        dlg.remind_requested.connect(lambda m, n=prayer_en, ts=time_str: self._schedule_reminder(n, ts, m))
 
         def _on_sound_done():
             try:
@@ -360,6 +374,12 @@ class MainWindow(QMainWindow):
 
         self._notif.play_adzan(prayer_en)
 
+        # Windows Toast notification
+        self._notif.show_toast(
+            f"{t('tray_prayer_time')} {name_id}",
+            t("toast_msg", name_id, time_str),
+        )
+
         if self._tray and not self.isActiveWindow():
             self._tray.showMessage(
                 f"{t('tray_prayer_time')} {name_id}",
@@ -369,8 +389,8 @@ class MainWindow(QMainWindow):
         dlg.show()
 
     def _schedule_reminder(self, prayer_en: str, time_str: str, minutes: int):
-        t = QTimer(self)
-        t.setSingleShot(True)
-        t.timeout.connect(lambda: self._fire_prayer_alert(prayer_en, time_str))
-        t.start(minutes * 60 * 1000)
-        self._remind_timers.append(t)
+        tmr = QTimer(self)
+        tmr.setSingleShot(True)
+        tmr.timeout.connect(lambda: self._fire_prayer_alert(prayer_en, time_str))
+        tmr.start(minutes * 60 * 1000)
+        self._remind_timers.append(tmr)

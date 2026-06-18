@@ -62,20 +62,22 @@ BG = SURFACE = SURFACE_2 = BORDER = TEXT = MUTED = ACCENT = ACCENT_DK = ""
 HEADING = BTN_HOVER = BTN_PRESSED = SCROLL_HOVER = DANGER_BG = ""
 ACTIVE = "dark"
 STYLESHEET = ""
+FONT_SIZE = 13   # updated by apply_font_size() / apply_theme()
 
 
 def _build_stylesheet() -> str:
+    fs = FONT_SIZE
     return f"""
 QWidget {{
     background: {BG};
     color: {TEXT};
     font-family: 'Segoe UI', system-ui, sans-serif;
-    font-size: 14px;
+    font-size: {fs}px;
 }}
 QLabel {{ background: transparent; }}
-QLabel#H1 {{ font-size: 24px; font-weight: 700; color: {HEADING}; }}
-QLabel#H2 {{ font-size: 18px; font-weight: 600; color: {HEADING}; }}
-QLabel#Muted {{ color: {MUTED}; font-size: 12px; }}
+QLabel#H1 {{ font-size: {fs + 11}px; font-weight: 700; color: {HEADING}; }}
+QLabel#H2 {{ font-size: {fs + 5}px; font-weight: 600; color: {HEADING}; }}
+QLabel#Muted {{ color: {MUTED}; font-size: {max(10, fs - 1)}px; }}
 QCheckBox, QRadioButton {{ background: transparent; }}
 QGroupBox {{
     border: 1px solid {BORDER}; border-radius: 10px;
@@ -156,6 +158,18 @@ QPushButton#AlarmOff {{
 }}
 QPushButton#AlarmOff:hover {{ background: {BTN_HOVER}; }}
 
+/* Dzikir counter button */
+QPushButton#DzikirBtn {{
+    background: {SURFACE_2}; border: 2px solid {BORDER}; border-radius: 12px;
+    padding: 16px; color: {ACCENT}; font-size: {fs + 4}px; font-weight: 700;
+}}
+QPushButton#DzikirBtn:hover {{ background: {BTN_HOVER}; border-color: {ACCENT}; }}
+QPushButton#DzikirBtn:pressed {{ background: {ACCENT_DK}; color: #ffffff; }}
+QPushButton#DzikirDone {{
+    background: {ACCENT_DK}; border: none; border-radius: 12px;
+    padding: 16px; color: #ffffff; font-size: {fs + 4}px; font-weight: 700;
+}}
+
 /* Tables */
 QTableWidget, QTableView {{
     background: {SURFACE}; border: 1px solid {BORDER}; border-radius: 8px;
@@ -207,9 +221,9 @@ QCheckBox::indicator:checked {{
 """
 
 
-def apply_theme(name: str) -> str:
+def apply_theme(name: str, font_size: int | None = None) -> str:
     global BG, SURFACE, SURFACE_2, BORDER, TEXT, MUTED, ACCENT, ACCENT_DK
-    global HEADING, BTN_HOVER, BTN_PRESSED, SCROLL_HOVER, DANGER_BG, STYLESHEET, ACTIVE
+    global HEADING, BTN_HOVER, BTN_PRESSED, SCROLL_HOVER, DANGER_BG, STYLESHEET, ACTIVE, FONT_SIZE
     pal = PALETTES.get(name, PALETTES["dark"])
     ACTIVE     = name if name in PALETTES else "dark"
     BG         = pal["BG"];    SURFACE   = pal["SURFACE"]; SURFACE_2 = pal["SURFACE_2"]
@@ -217,22 +231,35 @@ def apply_theme(name: str) -> str:
     ACCENT     = pal["ACCENT"]; ACCENT_DK = pal["ACCENT_DK"]; HEADING = pal["HEADING"]
     BTN_HOVER  = pal["BTN_HOVER"]; BTN_PRESSED = pal["BTN_PRESSED"]
     SCROLL_HOVER = pal["SCROLL_HOVER"]; DANGER_BG = pal["DANGER_BG"]
+    if font_size is not None:
+        FONT_SIZE = font_size
+    STYLESHEET = _build_stylesheet()
+    return STYLESHEET
+
+
+def apply_font_size(size: int) -> str:
+    """Update font size and rebuild stylesheet without changing theme."""
+    global FONT_SIZE, STYLESHEET
+    FONT_SIZE = size
     STYLESHEET = _build_stylesheet()
     return STYLESHEET
 
 
 def resolve_system_theme() -> str:
-    """Return 'dark' or 'light' based on Windows system setting."""
-    try:
-        import winreg
-        key = winreg.OpenKey(
-            winreg.HKEY_CURRENT_USER,
-            r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize",
-        )
-        value, _ = winreg.QueryValueEx(key, "AppsUseLightTheme")
-        return "light" if value == 1 else "dark"
-    except Exception:
-        return "dark"
+    """Return 'dark' or 'light' based on system setting."""
+    import sys
+    if sys.platform == "win32":
+        try:
+            import winreg
+            key = winreg.OpenKey(
+                winreg.HKEY_CURRENT_USER,
+                r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize",
+            )
+            value, _ = winreg.QueryValueEx(key, "AppsUseLightTheme")
+            return "light" if value == 1 else "dark"
+        except Exception:
+            pass
+    return "dark"
 
 
 apply_theme("dark")

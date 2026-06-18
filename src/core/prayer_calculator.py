@@ -14,6 +14,7 @@ PRAYER_NAMES_ID = {
     "Asr": "Ashar",
     "Maghrib": "Maghrib",
     "Isha": "Isya",
+    "Imsak": "Imsak",
 }
 
 HIJRI_MONTHS_ID = [
@@ -27,6 +28,26 @@ MONTHS_ID = [
     "Januari", "Februari", "Maret", "April", "Mei", "Juni",
     "Juli", "Agustus", "September", "Oktober", "November", "Desember",
 ]
+
+# Islamic events by Hijri (month, day): name in Indonesian / English
+ISLAMIC_EVENTS: dict[tuple[int, int], dict[str, str]] = {
+    (1,  1):  {"id": "Tahun Baru Hijriah",    "en": "Islamic New Year"},
+    (1,  10): {"id": "Hari Asyura",            "en": "Day of Ashura"},
+    (3,  12): {"id": "Maulid Nabi ﷺ",         "en": "Prophet's Birthday ﷺ"},
+    (7,  27): {"id": "Isra Mi'raj",            "en": "Isra Mi'raj"},
+    (8,  15): {"id": "Nisfu Sya'ban",          "en": "Nisf Sha'ban"},
+    (9,  1):  {"id": "Awal Ramadhan",          "en": "Start of Ramadan"},
+    (9,  17): {"id": "Nuzulul Qur'an",         "en": "Nuzul al-Quran"},
+    (9,  27): {"id": "Malam Lailatul Qadr",    "en": "Laylat al-Qadr"},
+    (10, 1):  {"id": "Idul Fitri",             "en": "Eid al-Fitr"},
+    (10, 2):  {"id": "Idul Fitri Hari Ke-2",   "en": "Eid al-Fitr Day 2"},
+    (10, 3):  {"id": "Hari Tasyrik",           "en": "Day of Tashreek"},
+    (12, 9):  {"id": "Hari Arafah",            "en": "Day of Arafah"},
+    (12, 10): {"id": "Idul Adha",              "en": "Eid al-Adha"},
+    (12, 11): {"id": "Hari Tasyrik",           "en": "Day of Tashreek"},
+    (12, 12): {"id": "Hari Tasyrik",           "en": "Day of Tashreek"},
+    (12, 13): {"id": "Hari Tasyrik",           "en": "Day of Tashreek"},
+}
 
 # isha_min=True means Isha is N minutes after Maghrib (fixed), else sun angle
 METHODS: dict[str, dict] = {
@@ -116,6 +137,7 @@ def calculate_times(
     method: str = "Kemenag",
     asr_method: int = ASR_STANDARD,
     altitude: float = 0.0,
+    imsak_minutes: int = 0,
 ) -> dict[str, str]:
     """Return prayer times as HH:MM strings for the given date/location."""
     m   = METHODS.get(method, METHODS["Kemenag"])
@@ -123,7 +145,6 @@ def calculate_times(
     noon = _solar_noon(jd, longitude, timezone)
     alt_corr = 0.0347 * math.sqrt(max(0.0, altitude))
 
-    # Pass positive angles — _sun_angle_time formula uses -sin(angle) internally
     fajr    = _sun_angle_time(jd, latitude, m["fajr"] + alt_corr, noon, cw=False)
     sunrise = _sun_angle_time(jd, latitude, 0.833 + alt_corr,     noon, cw=False)
     dhuhr   = noon
@@ -133,14 +154,16 @@ def calculate_times(
                if m["isha_min"]
                else _sun_angle_time(jd, latitude, m["isha"] + alt_corr, noon, cw=True))
 
-    return {
-        "Fajr":    _h_to_hhmm(fajr),
-        "Sunrise": _h_to_hhmm(sunrise),
-        "Dhuhr":   _h_to_hhmm(dhuhr),
-        "Asr":     _h_to_hhmm(asr),
-        "Maghrib": _h_to_hhmm(maghrib),
-        "Isha":    _h_to_hhmm(isha),
-    }
+    result: dict[str, str] = {}
+    if imsak_minutes > 0:
+        result["Imsak"] = _h_to_hhmm(fajr - imsak_minutes / 60.0)
+    result["Fajr"]    = _h_to_hhmm(fajr)
+    result["Sunrise"] = _h_to_hhmm(sunrise)
+    result["Dhuhr"]   = _h_to_hhmm(dhuhr)
+    result["Asr"]     = _h_to_hhmm(asr)
+    result["Maghrib"] = _h_to_hhmm(maghrib)
+    result["Isha"]    = _h_to_hhmm(isha)
+    return result
 
 
 def times_as_datetime(
@@ -152,11 +175,11 @@ def times_as_datetime(
     asr_method: int = ASR_STANDARD,
     altitude: float = 0.0,
 ) -> dict[str, datetime]:
-    """Return prayer times as datetime objects."""
+    """Return prayer times as datetime objects (no Imsak — used for alarm checks)."""
     raw = calculate_times(d, latitude, longitude, timezone, method, asr_method, altitude)
     result: dict[str, datetime] = {}
-    for name, t in raw.items():
-        h, m = map(int, t.split(":"))
+    for name, tv in raw.items():
+        h, m = map(int, tv.split(":"))
         result[name] = datetime(d.year, d.month, d.day, h, m)
     return result
 
@@ -204,3 +227,11 @@ def day_name_id(weekday: int) -> str:
 
 def month_name_id(month: int) -> str:
     return MONTHS_ID[(month - 1) % 12]
+
+
+def get_islamic_event(hijri_month: int, hijri_day: int, lang: str = "id") -> str | None:
+    """Return event name for the given Hijri date, or None if no event."""
+    ev = ISLAMIC_EVENTS.get((hijri_month, hijri_day))
+    if ev:
+        return ev.get(lang, ev.get("id", ""))
+    return None

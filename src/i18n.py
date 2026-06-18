@@ -237,6 +237,70 @@ _STRINGS: dict[str, dict[str, str]] = {
                "💡 For real-time accuracy, use your phone's compass with this app's bearing.</span>"),
     },
 
+    # ── Font size (#3) ───────────────────────────────────────────────────────
+    "lbl_font_size":    {"id": "Ukuran Teks",           "en": "Font Size"},
+    "font_size_small":  {"id": "Kecil (12px)",           "en": "Small (12px)"},
+    "font_size_med":    {"id": "Sedang (13px)",           "en": "Medium (13px)"},
+    "font_size_large":  {"id": "Besar (15px)",            "en": "Large (15px)"},
+    "font_size_xl":     {"id": "Sangat Besar (17px)",     "en": "Extra Large (17px)"},
+
+    # ── Ramadan / Imsak (#2) ─────────────────────────────────────────────────
+    "prayer_imsak":     {"id": "Imsak",                  "en": "Imsak"},
+    "imsak_row":        {"id": "Imsak (batas sahur)",     "en": "Imsak (end of suhoor)"},
+    "ramadan_badge":    {"id": "🌙 Ramadhan",             "en": "🌙 Ramadan"},
+    "lbl_imsak_min":    {"id": "Imsak sebelum Subuh (menit)",  "en": "Imsak before Fajr (min)"},
+    "imsak_off":        {"id": "Nonaktif (0)",            "en": "Off (0)"},
+
+    # ── Monthly schedule (#5) ────────────────────────────────────────────────
+    "schedule_7days":   {"id": "7 Hari",                 "en": "7 Days"},
+    "schedule_month":   {"id": "Bulan Ini",              "en": "This Month"},
+
+    # ── Location profiles (#6) ───────────────────────────────────────────────
+    "sec_profiles":     {"id": "📌  Profil Lokasi",       "en": "📌  Location Profiles"},
+    "profile_save_btn": {"id": "💾  Simpan Profil Saat Ini", "en": "💾  Save Current Profile"},
+    "profile_use":      {"id": "Pakai",                  "en": "Use"},
+    "profile_delete":   {"id": "Hapus",                  "en": "Delete"},
+    "profile_name_lbl": {"id": "Nama profil:",            "en": "Profile name:"},
+    "profile_name_ph":  {"id": "mis. Rumah / Kantor / Kampung", "en": "e.g. Home / Office / Village"},
+    "profile_saved":    {"id": "✅ Profil '{}' disimpan.", "en": "✅ Profile '{}' saved."},
+    "profile_applied":  {"id": "✅ Profil '{}' diterapkan.", "en": "✅ Profile '{}' applied."},
+    "profile_none":     {"id": "Belum ada profil tersimpan.", "en": "No saved profiles yet."},
+
+    # ── Toast notification (#9) ──────────────────────────────────────────────
+    "lbl_toast":        {"id": "Notifikasi sistem (Windows Toast)", "en": "System notification (Windows Toast)"},
+    "toast_msg":        {"id": "Waktu {} telah tiba: {}", "en": "{} time: {}"},
+
+    # ── Navigation for new pages ─────────────────────────────────────────────
+    "nav_dzikir":       {"id": "Dzikir",                 "en": "Dhikr"},
+    "nav_quran":        {"id": "Quran",                  "en": "Quran"},
+
+    # ── Dzikir page (#12) ────────────────────────────────────────────────────
+    "dzikir_title":     {"id": "Dzikir & Doa",            "en": "Dhikr & Dua"},
+    "dzikir_post":      {"id": "📿  Dzikir Setelah Sholat", "en": "📿  Post-Prayer Dhikr"},
+    "dzikir_morning":   {"id": "🌅  Dzikir Pagi",          "en": "🌅  Morning Adhkar"},
+    "dzikir_evening":   {"id": "🌙  Dzikir Petang",        "en": "🌙  Evening Adhkar"},
+    "dzikir_reset":     {"id": "Reset Semua",             "en": "Reset All"},
+    "dzikir_tap":       {"id": "Ketuk untuk menghitung",  "en": "Tap to count"},
+    "dzikir_complete":  {"id": "✅ Selesai",               "en": "✅ Complete"},
+    "dzikir_meaning":   {"id": "Artinya:",                "en": "Meaning:"},
+    "dzikir_times":     {"id": "kali",                   "en": "times"},
+    "dzikir_tab_post":  {"id": "Setelah Sholat",         "en": "Post-Prayer"},
+    "dzikir_tab_morn":  {"id": "Pagi",                   "en": "Morning"},
+    "dzikir_tab_eve":   {"id": "Petang",                 "en": "Evening"},
+
+    # ── Quran page (#15) ─────────────────────────────────────────────────────
+    "quran_title":      {"id": "Al-Quran Al-Karim",       "en": "The Holy Quran"},
+    "quran_select":     {"id": "Pilih Surah:",            "en": "Select Surah:"},
+    "quran_loading":    {"id": "⌛ Memuat surah...",       "en": "⌛ Loading surah..."},
+    "quran_offline":    {"id": "❌ Gagal memuat. Periksa koneksi internet.", "en": "❌ Failed to load. Check internet connection."},
+    "quran_cached":     {"id": "📱 Data dari cache lokal", "en": "📱 Data from local cache"},
+    "quran_verse":      {"id": "Ayat",                   "en": "Verse"},
+    "quran_bismillah":  {"id": "بِسْمِ اللّٰهِ الرَّحْمٰنِ الرَّحِيمِ", "en": "بِسْمِ اللّٰهِ الرَّحْمٰنِ الرَّحِيمِ"},
+    "quran_prev":       {"id": "◀ Sebelumnya",           "en": "◀ Previous"},
+    "quran_next":       {"id": "Berikutnya ▶",           "en": "Next ▶"},
+    "quran_search_ph":  {"id": "Cari surah...",           "en": "Search surah..."},
+    "quran_retry":      {"id": "🔄 Coba Lagi",            "en": "🔄 Retry"},
+
     # ── Compass 16-point directions ───────────────────────────────────────────
     "compass_N":   {"id": "U",   "en": "N"},
     "compass_NNE": {"id": "UTL", "en": "NNE"},
@@ -312,5 +376,6 @@ def prayer_name(prayer_en: str) -> str:
         "Asr":     "prayer_asr",
         "Maghrib": "prayer_maghrib",
         "Isha":    "prayer_isha",
+        "Imsak":   "prayer_imsak",
     }
     return t(_map.get(prayer_en, ""))

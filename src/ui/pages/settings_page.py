@@ -1,19 +1,22 @@
 """Settings page."""
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                               QFrame, QPushButton, QComboBox, QSpinBox,
                               QCheckBox, QLineEdit, QFileDialog, QDoubleSpinBox,
-                              QScrollArea, QGroupBox, QSlider, QSizePolicy)
+                              QScrollArea, QGroupBox, QSizePolicy, QInputDialog,
+                              QMessageBox, QListWidget, QListWidgetItem)
 
 from ..widgets import SectionCard
 from .. import theme as th
 from ...core import prayer_calculator as pc
 from ...i18n import t, set_language, get_language, SUPPORTED as I18N_SUPPORTED
 from ...i18n import prayer_name as _pname
+from ... import VERSION
 
 
 class SettingsPage(QWidget):
@@ -28,7 +31,6 @@ class SettingsPage(QWidget):
         outer.setContentsMargins(0, 0, 0, 0)
         outer.setSpacing(0)
 
-        # Scrollable area
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -58,12 +60,18 @@ class SettingsPage(QWidget):
         self._theme_combo = self._add_combo(app_card, t("lbl_theme"),
                                             ["dark", "light", "system"],
                                             [t("theme_dark"), t("theme_light"), t("theme_system")])
+        self._font_size_combo = self._add_combo(
+            app_card, t("lbl_font_size"),
+            ["12", "13", "15", "17"],
+            [t("font_size_small"), t("font_size_med"), t("font_size_large"), t("font_size_xl")],
+        )
+        self._font_size_combo.currentIndexChanged.connect(self._apply_font_size_live)
+
         self._time_fmt_combo = self._add_combo(
             app_card, t("lbl_time_format"),
             ["24h", "12h"],
             [t("fmt_24h"), t("fmt_12h")],
         )
-        # Apply time format live when changed (no need to click Save)
         self._time_fmt_combo.currentIndexChanged.connect(self._apply_time_format_live)
 
         self._lang_combo = self._add_combo(
@@ -83,6 +91,18 @@ class SettingsPage(QWidget):
         self._asr_combo = self._add_combo(calc_card, t("lbl_asr"),
                                           ["1", "2"],
                                           [t("asr_shafii"), t("asr_hanafi")])
+
+        # Imsak setting
+        imsak_row = QHBoxLayout()
+        lbl_imsak = QLabel(t("lbl_imsak_min"))
+        lbl_imsak.setStyleSheet(f"color: {th.MUTED}; min-width: 180px; background: transparent;")
+        self._imsak_spin = QSpinBox()
+        self._imsak_spin.setRange(0, 30)
+        self._imsak_spin.setSingleStep(1)
+        self._imsak_spin.setSpecialValueText(t("imsak_off"))
+        imsak_row.addWidget(lbl_imsak)
+        imsak_row.addWidget(self._imsak_spin, 1)
+        calc_card.body.addLayout(imsak_row)
         root.addWidget(calc_card)
 
         # ── Location
@@ -115,6 +135,39 @@ class SettingsPage(QWidget):
         loc_card.body.addLayout(self._make_hint(t("hint_city")))
         root.addWidget(loc_card)
 
+        # ── Location Profiles
+        prof_card = SectionCard(t("sec_profiles"))
+
+        # Profiles list
+        self._profile_list = QListWidget()
+        self._profile_list.setMaximumHeight(120)
+        self._profile_list.setStyleSheet(
+            f"QListWidget {{ background: {th.SURFACE_2}; border: 1px solid {th.BORDER}; "
+            f"border-radius: 8px; }}"
+            f"QListWidget::item {{ padding: 6px 10px; }}"
+            f"QListWidget::item:selected {{ background: {th.ACCENT_DK}; color: #fff; }}"
+        )
+        prof_card.body.addWidget(self._profile_list)
+
+        prof_btns = QHBoxLayout()
+        prof_btns.setSpacing(6)
+        self._btn_save_profile = QPushButton(t("profile_save_btn"))
+        self._btn_save_profile.clicked.connect(self._save_profile)
+        self._btn_use_profile = QPushButton(t("profile_use"))
+        self._btn_use_profile.clicked.connect(self._use_profile)
+        self._btn_del_profile = QPushButton(t("profile_delete"))
+        self._btn_del_profile.setObjectName("Danger")
+        self._btn_del_profile.clicked.connect(self._delete_profile)
+        prof_btns.addWidget(self._btn_save_profile, 2)
+        prof_btns.addWidget(self._btn_use_profile, 1)
+        prof_btns.addWidget(self._btn_del_profile, 1)
+        prof_card.body.addLayout(prof_btns)
+
+        self._profile_status = QLabel("")
+        self._profile_status.setStyleSheet(f"color: {th.GOOD}; font-size: 12px; background: transparent;")
+        prof_card.body.addWidget(self._profile_status)
+        root.addWidget(prof_card)
+
         # ── Notification
         notif_card = SectionCard(t("sec_notif"))
         self._notif_cb = QCheckBox(t("notif_cb"))
@@ -125,7 +178,11 @@ class SettingsPage(QWidget):
         self._sound_cb.setStyleSheet("background: transparent;")
         notif_card.body.addWidget(self._sound_cb)
 
-        # Custom sound path
+        self._toast_cb = QCheckBox(t("lbl_toast"))
+        self._toast_cb.setStyleSheet("background: transparent;")
+        notif_card.body.addWidget(self._toast_cb)
+
+        # Custom sound path (supports MP3 and WAV now)
         sound_row = QHBoxLayout()
         sound_row.setSpacing(8)
         lbl_sound = QLabel(t("lbl_sound_file"))
@@ -150,7 +207,7 @@ class SettingsPage(QWidget):
             [t("reminder_off"), t("reminder_5"), t("reminder_10"), t("reminder_15")],
         )
 
-        # ── Per-prayer alarm & sound section
+        # Per-prayer alarm & sound
         sep2 = QFrame()
         sep2.setFixedHeight(1)
         sep2.setStyleSheet(f"background: {th.BORDER};")
@@ -199,10 +256,13 @@ class SettingsPage(QWidget):
         # ── Window behavior
         win_card = SectionCard(t("sec_window"))
 
-        self._startup_cb = QCheckBox(t("startup_cb"))
-        self._startup_cb.setStyleSheet("background: transparent;")
-        self._startup_cb.stateChanged.connect(self._on_startup_changed)
-        win_card.body.addWidget(self._startup_cb)
+        if sys.platform == "win32":
+            self._startup_cb = QCheckBox(t("startup_cb"))
+            self._startup_cb.setStyleSheet("background: transparent;")
+            self._startup_cb.stateChanged.connect(self._on_startup_changed)
+            win_card.body.addWidget(self._startup_cb)
+        else:
+            self._startup_cb = None
 
         self._start_min_cb = QCheckBox(t("start_min_cb"))
         self._start_min_cb.setStyleSheet("background: transparent;")
@@ -216,7 +276,7 @@ class SettingsPage(QWidget):
         # ── About
         about_card = SectionCard(t("sec_about"))
 
-        lbl_name = QLabel("Muslim Desk  v1.0.0")
+        lbl_name = QLabel(f"Muslim Desk  v{VERSION}")
         lbl_name.setStyleSheet(
             f"font-size: 16px; font-weight: 800; color: {th.ACCENT}; background: transparent;"
         )
@@ -278,7 +338,6 @@ class SettingsPage(QWidget):
         root.addWidget(self._status)
 
     def _restart_app(self):
-        """Save current settings then relaunch the executable."""
         import sys
         from PyQt6.QtCore import QProcess
         from PyQt6.QtWidgets import QApplication
@@ -286,18 +345,28 @@ class SettingsPage(QWidget):
         QApplication.quit()
 
     def _on_startup_changed(self, state: int):
-        from ...data.settings_manager import set_startup_enabled
-        enabled = (state == 2)  # Qt.CheckState.Checked
-        set_startup_enabled(enabled)
+        if sys.platform == "win32":
+            from ...data.settings_manager import set_startup_enabled
+            enabled = (state == 2)
+            set_startup_enabled(enabled)
 
     def _apply_time_format_live(self, index: int):
-        """Apply time format immediately when combo changes — no Save needed."""
         fmt_keys = ["24h", "12h"]
         if index < 0 or index >= len(fmt_keys):
             return
         self._win.settings.time_format = fmt_keys[index]
         if hasattr(self._win._dash, "refresh"):
             self._win._dash.refresh()
+
+    def _apply_font_size_live(self, index: int):
+        sizes = [12, 13, 15, 17]
+        if index < 0 or index >= len(sizes):
+            return
+        size = sizes[index]
+        self._win.settings.font_size = size
+        th.apply_font_size(size)
+        from PyQt6.QtWidgets import QApplication
+        QApplication.instance().setStyleSheet(th.STYLESHEET)
 
     # ─── city search ─────────────────────────────────────────────────────────
 
@@ -315,17 +384,87 @@ class SettingsPage(QWidget):
         self._country_edit.setText(loc.country)
         self._auto_loc_cb.setChecked(False)
         self._on_auto_loc_changed(0)
-        # Auto-set calculation method based on country
         method_msg = ""
         if loc.country_code:
             from ...core.location_service import method_for_country
-            from ...core import prayer_calculator as pc
             new_method = method_for_country(loc.country_code)
             _method_keys = list(pc.METHODS.keys())
             if new_method in _method_keys:
                 self._method_combo.setCurrentIndex(_method_keys.index(new_method))
             method_msg = f"  ·  {t('method_auto_set', new_method)}"
         self._status.setText(f"{t('loc_set_to')}{loc.city}, {loc.country}{method_msg}")
+
+    # ─── profiles ────────────────────────────────────────────────────────────
+
+    def _refresh_profile_list(self):
+        self._profile_list.clear()
+        profiles = self._win.settings.profiles
+        if not profiles:
+            self._profile_list.addItem(t("profile_none"))
+            self._profile_list.item(0).setFlags(Qt.ItemFlag.NoItemFlags)
+            return
+        for p in profiles:
+            item = QListWidgetItem(f"📌  {p.get('name', '?')}  —  {p.get('city', '')}, {p.get('country', '')}")
+            self._profile_list.addItem(item)
+
+    def _save_profile(self):
+        name, ok = QInputDialog.getText(
+            self, t("profile_name_lbl"), t("profile_name_lbl"),
+            text=t("profile_name_ph"),
+        )
+        if not ok or not name.strip():
+            return
+        name = name.strip()
+        s = self._win.settings
+        profile = {
+            "name":          name,
+            "latitude":      self._lat_spin.value(),
+            "longitude":     self._lon_spin.value(),
+            "timezone":      self._tz_spin.value(),
+            "altitude":      self._alt_spin.value(),
+            "city":          self._city_edit.text().strip(),
+            "country":       self._country_edit.text().strip(),
+            "method":        list(pc.METHODS.keys())[self._method_combo.currentIndex()],
+        }
+        # Replace if same name exists
+        s.profiles = [p for p in s.profiles if p.get("name") != name]
+        s.profiles.append(profile)
+        from ...data.settings_manager import save as save_s
+        save_s(s)
+        self._refresh_profile_list()
+        self._profile_status.setText(t("profile_saved", name))
+
+    def _use_profile(self):
+        row = self._profile_list.currentRow()
+        profiles = self._win.settings.profiles
+        if row < 0 or row >= len(profiles):
+            return
+        p = profiles[row]
+        self._lat_spin.setValue(p.get("latitude", self._win.settings.latitude))
+        self._lon_spin.setValue(p.get("longitude", self._win.settings.longitude))
+        self._tz_spin.setValue(p.get("timezone", self._win.settings.timezone))
+        self._alt_spin.setValue(p.get("altitude", 0.0))
+        self._city_edit.setText(p.get("city", ""))
+        self._country_edit.setText(p.get("country", ""))
+        self._auto_loc_cb.setChecked(False)
+        self._on_auto_loc_changed(0)
+        method = p.get("method", "MWL")
+        _keys = list(pc.METHODS.keys())
+        if method in _keys:
+            self._method_combo.setCurrentIndex(_keys.index(method))
+        self._profile_status.setText(t("profile_applied", p.get("name", "?")))
+
+    def _delete_profile(self):
+        row = self._profile_list.currentRow()
+        profiles = self._win.settings.profiles
+        if row < 0 or row >= len(profiles):
+            return
+        name = profiles[row].get("name", "?")
+        self._win.settings.profiles.pop(row)
+        from ...data.settings_manager import save as save_s
+        save_s(self._win.settings)
+        self._refresh_profile_list()
+        self._profile_status.setText(f"🗑 '{name}' dihapus.")
 
     # ─── helpers ─────────────────────────────────────────────────────────────
 
@@ -384,7 +523,7 @@ class SettingsPage(QWidget):
     def _browse_sound(self):
         path, _ = QFileDialog.getOpenFileName(
             self, t("lbl_sound_file"), "",
-            "Audio WAV (*.wav);;All Files (*.*)"
+            "Audio Files (*.mp3 *.wav *.ogg);;All Files (*.*)"
         )
         if path:
             self._sound_path.setText(path)
@@ -392,7 +531,7 @@ class SettingsPage(QWidget):
     def _browse_prayer_sound(self, edit: QLineEdit, prayer_name: str):
         path, _ = QFileDialog.getOpenFileName(
             self, f"{t('lbl_sound_file')} — {prayer_name}", "",
-            "Audio WAV (*.wav);;All Files (*.*)"
+            "Audio Files (*.mp3 *.wav *.ogg);;All Files (*.*)"
         )
         if path:
             edit.setText(path)
@@ -406,6 +545,13 @@ class SettingsPage(QWidget):
         theme_keys = ["dark", "light", "system"]
         idx = theme_keys.index(s.theme) if s.theme in theme_keys else 0
         self._theme_combo.setCurrentIndex(idx)
+
+        # Font size
+        size_keys = [12, 13, 15, 17]
+        fidx = size_keys.index(s.font_size) if s.font_size in size_keys else 1
+        self._font_size_combo.blockSignals(True)
+        self._font_size_combo.setCurrentIndex(fidx)
+        self._font_size_combo.blockSignals(False)
 
         # Time format
         fmt_keys = ["24h", "12h"]
@@ -424,6 +570,9 @@ class SettingsPage(QWidget):
         # Asr
         self._asr_combo.setCurrentIndex(max(0, s.asr_method - 1))
 
+        # Imsak
+        self._imsak_spin.setValue(s.imsak_minutes)
+
         # Location
         self._auto_loc_cb.setChecked(s.auto_location)
         self._lat_spin.setValue(s.latitude)
@@ -434,9 +583,14 @@ class SettingsPage(QWidget):
         self._country_edit.setText(s.country)
         self._on_auto_loc_changed(2 if s.auto_location else 0)
 
+        # Profiles
+        self._refresh_profile_list()
+        self._profile_status.setText("")
+
         # Notification
         self._notif_cb.setChecked(s.notification_enabled)
         self._sound_cb.setChecked(s.sound_enabled)
+        self._toast_cb.setChecked(s.toast_enabled)
         self._sound_path.setText(s.custom_sound_path)
 
         reminder_keys = ["0", "5", "10", "15"]
@@ -450,10 +604,11 @@ class SettingsPage(QWidget):
             cb.setChecked(s.prayer_alarms.get(en, True))
 
         # Window
-        from ...data.settings_manager import is_startup_enabled
-        self._startup_cb.blockSignals(True)
-        self._startup_cb.setChecked(is_startup_enabled())
-        self._startup_cb.blockSignals(False)
+        if self._startup_cb is not None and sys.platform == "win32":
+            from ...data.settings_manager import is_startup_enabled
+            self._startup_cb.blockSignals(True)
+            self._startup_cb.setChecked(is_startup_enabled())
+            self._startup_cb.blockSignals(False)
         self._start_min_cb.setChecked(s.start_minimized)
         self._tray_cb.setChecked(s.minimize_to_tray)
 
@@ -464,28 +619,29 @@ class SettingsPage(QWidget):
         old_theme = s.theme
         old_lang  = s.language
 
-        # Theme (hardcoded keys)
         _theme_keys = ["dark", "light", "system"]
         _ti = self._theme_combo.currentIndex()
         s.theme = _theme_keys[_ti] if 0 <= _ti < len(_theme_keys) else "dark"
 
-        # Time format (hardcoded keys)
+        # Font size
+        _size_keys = [12, 13, 15, 17]
+        _fsi = self._font_size_combo.currentIndex()
+        s.font_size = _size_keys[_fsi] if 0 <= _fsi < len(_size_keys) else 13
+
         _fmt_keys = ["24h", "12h"]
         _fi = self._time_fmt_combo.currentIndex()
         s.time_format = _fmt_keys[_fi] if 0 <= _fi < len(_fmt_keys) else "24h"
 
-        # Language
         _lang_keys = list(I18N_SUPPORTED)
         _li = self._lang_combo.currentIndex()
         s.language = _lang_keys[_li] if 0 <= _li < len(_lang_keys) else "id"
 
-        # Method (hardcoded keys)
         _method_keys = list(pc.METHODS.keys())
         _mi = self._method_combo.currentIndex()
         s.method = _method_keys[_mi] if 0 <= _mi < len(_method_keys) else "Kemenag"
         s.asr_method = self._asr_combo.currentIndex() + 1
+        s.imsak_minutes = self._imsak_spin.value()
 
-        # Location
         s.auto_location = self._auto_loc_cb.isChecked()
         s.latitude      = self._lat_spin.value()
         s.longitude     = self._lon_spin.value()
@@ -494,9 +650,9 @@ class SettingsPage(QWidget):
         s.city          = self._city_edit.text().strip()
         s.country       = self._country_edit.text().strip()
 
-        # Notification
         s.notification_enabled = self._notif_cb.isChecked()
         s.sound_enabled        = self._sound_cb.isChecked()
+        s.toast_enabled        = self._toast_cb.isChecked()
         s.custom_sound_path    = self._sound_path.text().strip()
 
         _reminder_keys = ["0", "5", "10", "15"]
@@ -509,19 +665,15 @@ class SettingsPage(QWidget):
         for en, cb in self._prayer_alarm_checks.items():
             s.prayer_alarms[en] = cb.isChecked()
 
-        # Window
         s.start_minimized  = self._start_min_cb.isChecked()
         s.minimize_to_tray = self._tray_cb.isChecked()
 
         self._win.on_settings_changed()
-
-        # Always sync language module (may have changed)
         set_language(s.language)
 
         if s.theme != old_theme:
             self._win.apply_theme_live(s.theme)
         elif s.language != old_lang:
-            # Language changed → restart app so all labels rebuild cleanly
             self._restart_app()
             return
         else:
