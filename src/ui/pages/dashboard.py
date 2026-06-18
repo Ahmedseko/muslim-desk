@@ -607,7 +607,7 @@ class DashboardPage(QWidget):
         grid_widget.setStyleSheet("background: transparent;")
         grid = QGridLayout(grid_widget)
         grid.setVerticalSpacing(0)
-        grid.setHorizontalSpacing(2)
+        grid.setHorizontalSpacing(0)
         grid.setContentsMargins(0, 0, 0, 0)
         grid.setColumnStretch(0, 36)
         for c in range(1, 7):
@@ -630,13 +630,35 @@ class DashboardPage(QWidget):
         sep.setStyleSheet(f"background: {th.BORDER};")
         grid.addWidget(sep, 1, 0, 1, 7)
 
+        lang = get_language()
         for row_idx, d in enumerate(days):
             is_today  = (d == today)
             is_friday = (d.weekday() == 4)
 
-            bg   = f"background: {th.SURFACE_2}; border-radius: 4px;" if is_today else "background: transparent;"
-            dcol = th.ACCENT if is_today else ("#38bdf8" if is_friday else th.MUTED)
-            fw   = "700" if is_today else "500"
+            hy_d, hm_d, hd_d = pc.gregorian_to_hijri(d.year, d.month, d.day)
+            is_ayyamul = hd_d in (13, 14, 15)
+            is_event   = bool(pc.get_islamic_event(hm_d, hd_d, lang))
+
+            if is_today:
+                bg            = f"background: {th.ACCENT_DK};"
+                dcol          = "#ffffff"
+                fw            = "700"
+                tcol_override = "#ffffff"
+            elif is_ayyamul:
+                bg            = "background: rgba(245,158,11,0.18);"
+                dcol          = "#f59e0b"
+                fw            = "600"
+                tcol_override = None
+            elif is_event:
+                bg            = "background: rgba(167,139,250,0.18);"
+                dcol          = "#a78bfa"
+                fw            = "600"
+                tcol_override = None
+            else:
+                bg            = "background: transparent;"
+                dcol          = "#38bdf8" if is_friday else th.MUTED
+                fw            = "500"
+                tcol_override = None
 
             date_txt = f"{_day_name(d.weekday(), short=True)}, {d.day} {_month_name(d.month, short=True)}"
             dlbl = QLabel(date_txt)
@@ -651,10 +673,11 @@ class DashboardPage(QWidget):
                 )
                 times["Dhuha"] = self._calc_dhuha(times)
                 for col_idx, (key, color) in enumerate(zip(PKEY, PCOL)):
+                    cell_color = tcol_override if tcol_override else color
                     lbl = QLabel(_fmt_time(times.get(key, "--:--"), tfmt))
                     lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
                     lbl.setStyleSheet(
-                        f"color: {color}; font-size: 11px; font-weight: {fw}; padding: 4px 1px; {bg}"
+                        f"color: {cell_color}; font-size: 11px; font-weight: {fw}; padding: 4px 1px; {bg}"
                     )
                     grid.addWidget(lbl, row_idx + 2, col_idx + 1)
             except Exception:
