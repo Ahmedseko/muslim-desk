@@ -1,3 +1,5 @@
 PyQt6>=6.6
 requests>=2.31
 hijri-converter>=2.3
+timezonefinder>=6.0
+tzdata>=2024.1

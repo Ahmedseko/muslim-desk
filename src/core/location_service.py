@@ -107,8 +107,28 @@ def tz_label(offset: float) -> str:
 
 
 def timezone_from_longitude(lon: float) -> float:
-    """Estimate UTC offset from longitude (nearest whole hour)."""
+    """Estimate UTC offset from longitude (nearest whole hour) — fallback only."""
     return float(round(lon / 15.0))
+
+
+def timezone_from_coords(lat: float, lon: float) -> tuple[float, str]:
+    """Return (utc_offset_hours, iana_name) for given coordinates.
+
+    Uses timezonefinder for accurate political timezone boundaries.
+    Falls back to longitude estimate if library unavailable.
+    """
+    try:
+        from timezonefinder import TimezoneFinder
+        from zoneinfo import ZoneInfo
+        from datetime import datetime
+        tf = TimezoneFinder()
+        tz_name = tf.timezone_at(lat=lat, lng=lon) or ""
+        if tz_name:
+            offset = datetime.now(ZoneInfo(tz_name)).utcoffset().total_seconds() / 3600
+            return offset, tz_name
+    except Exception:
+        pass
+    return timezone_from_longitude(lon), ""
 
 
 def search_city(query: str, timeout: int = 8) -> list[dict]:
@@ -163,7 +183,7 @@ def search_city(query: str, timeout: int = 8) -> list[dict]:
             parts = [p for p in [city, district, state, country] if p and p != city]
             display = city + (", " + ", ".join(parts[:3]) if parts else "")
 
-            tz = timezone_from_longitude(lon)
+            tz_offset, tz_name = timezone_from_coords(lat, lon)
             out.append({
                 "display_name": display,
                 "full_name":    item.get("display_name", display),
@@ -171,7 +191,8 @@ def search_city(query: str, timeout: int = 8) -> list[dict]:
                 "lon":          lon,
                 "city":         city,
                 "country":      country,
-                "timezone":     tz,
+                "timezone":     tz_offset,
+                "timezone_name": tz_name,
             })
         return out
     except Exception:

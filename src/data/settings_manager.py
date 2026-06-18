@@ -7,6 +7,45 @@ from pathlib import Path
 from typing import Dict
 
 SETTINGS_PATH = Path.home() / ".muslim_desk" / "settings.json"
+_STARTUP_KEY  = r"Software\Microsoft\Windows\CurrentVersion\Run"
+_STARTUP_NAME = "Muslim Desk"
+
+
+def set_startup_enabled(enabled: bool) -> bool:
+    """Add or remove the Windows startup registry entry."""
+    import sys, winreg
+    try:
+        key = winreg.OpenKey(
+            winreg.HKEY_CURRENT_USER, _STARTUP_KEY, 0,
+            winreg.KEY_SET_VALUE,
+        )
+        if enabled:
+            exe = sys.executable  # correct when frozen by PyInstaller
+            winreg.SetValueEx(key, _STARTUP_NAME, 0, winreg.REG_SZ, f'"{exe}"')
+        else:
+            try:
+                winreg.DeleteValue(key, _STARTUP_NAME)
+            except FileNotFoundError:
+                pass
+        winreg.CloseKey(key)
+        return True
+    except Exception:
+        return False
+
+
+def is_startup_enabled() -> bool:
+    """Return True if app is registered to run at Windows startup."""
+    import winreg
+    try:
+        key = winreg.OpenKey(
+            winreg.HKEY_CURRENT_USER, _STARTUP_KEY, 0,
+            winreg.KEY_READ,
+        )
+        winreg.QueryValueEx(key, _STARTUP_NAME)
+        winreg.CloseKey(key)
+        return True
+    except Exception:
+        return False
 
 
 @dataclass
@@ -57,6 +96,9 @@ class Settings:
     # Time display format
     time_format: str = "24h"   # "24h" | "12h"
 
+    # Language
+    language: str = "id"       # "id" | "en"
+
     # Window state
     start_minimized: bool = False
     minimize_to_tray: bool = True
@@ -74,6 +116,11 @@ def load() -> Settings:
             defaults = Settings().prayer_alarms
             for key, default_val in defaults.items():
                 s.prayer_alarms.setdefault(key, default_val)
+            # safety: if all wajib prayers are disabled, reset to defaults
+            _wajib = ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"]
+            if not any(s.prayer_alarms.get(p, False) for p in _wajib):
+                for p in _wajib:
+                    s.prayer_alarms[p] = True
             # ensure prayer_sounds keys present
             if not isinstance(s.prayer_sounds, dict):
                 s.prayer_sounds = {}

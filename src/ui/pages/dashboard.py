@@ -15,6 +15,7 @@ from .. import theme as th
 from ...core import prayer_calculator as pc
 from ...core.location_service import detect_location, app_now, local_timezone_offset, tz_label
 from ...core.qibla_calculator import qibla_bearing, distance_to_mecca_km
+from ...i18n import t, day_name as _day_name, month_name as _month_name, prayer_name as _prayer_name
 
 
 _PRAYER_ORDER = ["Fajr", "Sunrise", "Dhuhr", "Asr", "Maghrib", "Isha"]
@@ -85,17 +86,17 @@ class DashboardPage(QWidget):
         loc_col.setAlignment(Qt.AlignmentFlag.AlignRight)
         loc_col.setSpacing(4)
 
-        self._loc_label = QLabel("📍 Memuat lokasi...")
+        self._loc_label = QLabel(t("loading_loc"))
         self._loc_label.setStyleSheet(f"color: {th.MUTED}; font-size: 13px; background: transparent;")
         self._loc_label.setAlignment(Qt.AlignmentFlag.AlignRight)
         loc_col.addWidget(self._loc_label)
 
         btn_row = QHBoxLayout()
         btn_row.setSpacing(6)
-        self._btn_search_city = QPushButton("🔍 Cari Kota")
+        self._btn_search_city = QPushButton(t("search_city_btn"))
         self._btn_search_city.setFixedHeight(32)
         self._btn_search_city.clicked.connect(self._open_city_search)
-        self._btn_refresh_loc = QPushButton("🔄 Auto Lokasi")
+        self._btn_refresh_loc = QPushButton(t("auto_location_btn"))
         self._btn_refresh_loc.setObjectName("Primary")
         self._btn_refresh_loc.setFixedHeight(32)
         self._btn_refresh_loc.clicked.connect(self._update_location)
@@ -133,13 +134,13 @@ class DashboardPage(QWidget):
             f"border-radius: 6px; padding: 4px 12px; color: #f59e0b; font-size: 12px; font-weight: 600; }}"
             f"QPushButton:hover {{ background: rgba(245,158,11,0.32); }}"
         )
-        self._btn_use_sys_tz = QPushButton("Gunakan Waktu Sistem")
+        self._btn_use_sys_tz = QPushButton(t("tz_use_system"))
         self._btn_use_sys_tz.setFixedHeight(30)
         self._btn_use_sys_tz.setStyleSheet(_btn_style)
         self._btn_use_sys_tz.clicked.connect(self._apply_system_timezone)
         tz_lay.addWidget(self._btn_use_sys_tz)
 
-        btn_tz_dismiss = QPushButton("Abaikan")
+        btn_tz_dismiss = QPushButton(t("tz_dismiss"))
         btn_tz_dismiss.setFixedHeight(30)
         btn_tz_dismiss.setStyleSheet(_btn_style)
         btn_tz_dismiss.clicked.connect(lambda: self._tz_bar.setVisible(False))
@@ -158,7 +159,7 @@ class DashboardPage(QWidget):
         clock_layout = QVBoxLayout(clock_card)
         clock_layout.setContentsMargins(20, 16, 20, 16)
         clock_layout.setSpacing(4)
-        lbl_now = QLabel("Waktu Sekarang")
+        lbl_now = QLabel(t("current_time"))
         lbl_now.setStyleSheet(f"font-size: 12px; color: {th.MUTED}; font-weight: 500; background: transparent;")
         self._clock = ClockWidget()
         clock_layout.addWidget(lbl_now)
@@ -179,7 +180,7 @@ class DashboardPage(QWidget):
         prog_layout.setSpacing(6)
 
         prog_top = QHBoxLayout()
-        lbl_prog = QLabel("Waktu berlalu menuju sholat berikutnya")
+        lbl_prog = QLabel(t("progress_lbl"))
         lbl_prog.setStyleSheet(f"font-size: 11px; color: {th.MUTED}; background: transparent;")
         self._progress_pct = QLabel("0%")
         self._progress_pct.setStyleSheet(
@@ -209,7 +210,7 @@ class DashboardPage(QWidget):
 
         for name in _MAIN_PRAYERS:
             color = th.PRAYER_COLORS[name]
-            name_id = pc.PRAYER_NAMES_ID[name]
+            name_id = _prayer_name(name) or pc.PRAYER_NAMES_ID[name]
             card = PrayerCard(name, name_id, color)
             card.alarm_toggled.connect(self._on_alarm_toggled)
             self._prayer_cards[name] = card
@@ -226,7 +227,7 @@ class DashboardPage(QWidget):
 
         sun_icon = QLabel("🌅")
         sun_icon.setStyleSheet("font-size: 18px; background: transparent;")
-        lbl_syuruk = QLabel("Syuruk (Matahari Terbit)")
+        lbl_syuruk = QLabel(t("sunrise_row"))
         lbl_syuruk.setStyleSheet(f"font-size: 13px; color: {th.MUTED}; background: transparent;")
         self._syuruk_time = QLabel("--:--")
         self._syuruk_time.setStyleSheet(f"font-size: 16px; font-weight: 700; "
@@ -238,7 +239,7 @@ class DashboardPage(QWidget):
         syuruk_layout.addWidget(self._syuruk_time)
 
         # Alarm toggle for Sunrise
-        self._syuruk_alarm_btn = QPushButton("🔕 Nonaktif")
+        self._syuruk_alarm_btn = QPushButton(t("alarm_inactive"))
         self._syuruk_alarm_btn.setObjectName("AlarmOff")
         self._syuruk_alarm_btn.setFixedHeight(26)
         self._syuruk_alarm_btn.clicked.connect(self._toggle_syuruk)
@@ -266,8 +267,8 @@ class DashboardPage(QWidget):
         today = app_now(s.timezone).date()   # use app timezone, not system date
 
         # Gregorian
-        greg = (f"{pc.day_name_id(today.weekday())}, "
-                f"{today.day} {pc.month_name_id(today.month)} {today.year}")
+        greg = (f"{_day_name(today.weekday())}, "
+                f"{today.day} {_month_name(today.month)} {today.year}")
         # Hijri
         hy, hm, hd = pc.gregorian_to_hijri(today.year, today.month, today.day)
         hijri = pc.format_hijri(hy, hm, hd)
@@ -284,7 +285,7 @@ class DashboardPage(QWidget):
             )
             self._today_times_date = today
         except Exception as e:
-            self._status.setText(f"Gagal hitung waktu: {e}")
+            self._status.setText(t("calc_failed") + str(e))
             return
 
         # Update cards
@@ -298,7 +299,7 @@ class DashboardPage(QWidget):
         self._syuruk_time.setText(_fmt_time(self._today_times.get("Sunrise", "--:--"), tfmt))
         syuruk_on = s.prayer_alarms.get("Sunrise", False)
         self._syuruk_alarm_btn.setObjectName("AlarmOn" if syuruk_on else "AlarmOff")
-        self._syuruk_alarm_btn.setText("🔔 Aktif" if syuruk_on else "🔕 Nonaktif")
+        self._syuruk_alarm_btn.setText(t("alarm_active") if syuruk_on else t("alarm_inactive"))
         self._syuruk_alarm_btn.style().unpolish(self._syuruk_alarm_btn)
         self._syuruk_alarm_btn.style().polish(self._syuruk_alarm_btn)
 
@@ -325,9 +326,9 @@ class DashboardPage(QWidget):
         order = _PRAYER_ORDER
         dts: dict[str, datetime] = {}
         for name in order:
-            t = self._today_times.get(name)
-            if t:
-                h, m = map(int, t.split(":"))
+            tv = self._today_times.get(name)
+            if tv:
+                h, m = map(int, tv.split(":"))
                 dts[name] = datetime(today.year, today.month, today.day, h, m)
 
         # Find next prayer (today)
@@ -407,9 +408,9 @@ class DashboardPage(QWidget):
             countdown_str = f"{hh:02d}:{mi:02d}:{ss:02d}"
             color = th.PRAYER_COLORS.get(next_name, th.ACCENT)
 
-            label_id = pc.PRAYER_NAMES_ID.get(next_name, next_name)
+            label_id = _prayer_name(next_name) or pc.PRAYER_NAMES_ID.get(next_name, next_name)
             if tomorrow_fajr:
-                label_id += " (Besok)"
+                label_id += t("tomorrow_suffix")
 
             time_display = _fmt_time(next_dt.strftime("%H:%M"), self._win.settings.time_format)
             self._banner.update_next(label_id, time_display, countdown_str, color)
@@ -474,9 +475,9 @@ class DashboardPage(QWidget):
         dlg.exec()
 
     def _update_location(self):
-        self._btn_refresh_loc.setText("⌛ Mendeteksi...")
+        self._btn_refresh_loc.setText(t("detecting_loc"))
         self._btn_refresh_loc.setEnabled(False)
-        self._status.setText("Mendeteksi lokasi via IP...")
+        self._status.setText(t("detecting_via_ip"))
         threading.Thread(target=self._detect_thread, daemon=True).start()
 
     def _detect_thread(self):
@@ -493,9 +494,9 @@ class DashboardPage(QWidget):
         s.timezone_name = loc.timezone_name
         from ...data.settings_manager import save as save_s
         save_s(s)
-        self._btn_refresh_loc.setText("🔄 Perbarui Lokasi")
+        self._btn_refresh_loc.setText(t("refresh_location_btn"))
         self._btn_refresh_loc.setEnabled(True)
-        self._status.setText(f"Lokasi diperbarui: {loc.display_name()}")
+        self._status.setText(t("loc_updated") + loc.display_name())
         self.refresh()
 
     # ─── alarm toggles ───────────────────────────────────────────────────────
@@ -511,7 +512,7 @@ class DashboardPage(QWidget):
         new_val = not current
         s.prayer_alarms["Sunrise"] = new_val
         self._syuruk_alarm_btn.setObjectName("AlarmOn" if new_val else "AlarmOff")
-        self._syuruk_alarm_btn.setText("🔔 Aktif" if new_val else "🔕 Nonaktif")
+        self._syuruk_alarm_btn.setText(t("alarm_active") if new_val else t("alarm_inactive"))
         self._syuruk_alarm_btn.style().unpolish(self._syuruk_alarm_btn)
         self._syuruk_alarm_btn.style().polish(self._syuruk_alarm_btn)
         from ...data.settings_manager import save as save_s
@@ -520,7 +521,7 @@ class DashboardPage(QWidget):
     # ─── weekly schedule ─────────────────────────────────────────────────────
 
     def _build_weekly_card(self) -> SectionCard:
-        card = SectionCard("Jadwal Sholat 7 Hari Ke Depan")
+        card = SectionCard(t("weekly_title"))
 
         # Centered date-range subtitle (updated on refresh)
         self._weekly_range_lbl = QLabel("—")
@@ -536,17 +537,17 @@ class DashboardPage(QWidget):
         grid.setVerticalSpacing(0)
         grid.setHorizontalSpacing(4)
         grid.setContentsMargins(0, 0, 0, 0)
-        grid.setColumnStretch(0, 22)
+        grid.setColumnStretch(0, 42)
         for c in range(1, 6):
-            grid.setColumnStretch(c, 16)
+            grid.setColumnStretch(c, 12)
 
         _HDRS = [
-            ("Hari / Tanggal", th.MUTED),
-            ("Subuh",          th.PRAYER_COLORS["Fajr"]),
-            ("Dzuhur",         th.PRAYER_COLORS["Dhuhr"]),
-            ("Ashar",          th.PRAYER_COLORS["Asr"]),
-            ("Maghrib",        th.PRAYER_COLORS["Maghrib"]),
-            ("Isya",           th.PRAYER_COLORS["Isha"]),
+            (t("weekly_col_date"),   th.MUTED),
+            (_prayer_name("Fajr"),   th.PRAYER_COLORS["Fajr"]),
+            (_prayer_name("Dhuhr"),  th.PRAYER_COLORS["Dhuhr"]),
+            (_prayer_name("Asr"),    th.PRAYER_COLORS["Asr"]),
+            (_prayer_name("Maghrib"),th.PRAYER_COLORS["Maghrib"]),
+            (_prayer_name("Isha"),   th.PRAYER_COLORS["Isha"]),
         ]
         for col, (h, c) in enumerate(_HDRS):
             lbl = QLabel(h)
@@ -588,11 +589,10 @@ class DashboardPage(QWidget):
         s = self._win.settings
         today = date.today()
         end   = today + timedelta(days=6)
-        MONTHS_ID = ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"]
         self._weekly_range_lbl.setText(
-            f"{today.day} {MONTHS_ID[today.month-1]} — {end.day} {MONTHS_ID[end.month-1]} {end.year}"
+            f"{today.day} {_month_name(today.month, short=True)} — "
+            f"{end.day} {_month_name(end.month, short=True)} {end.year}"
         )
-        DAYS  = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"]
         PCOL  = [
             th.PRAYER_COLORS["Fajr"],
             th.PRAYER_COLORS["Dhuhr"],
@@ -613,7 +613,9 @@ class DashboardPage(QWidget):
             fw    = "700" if is_today else "500"
             fsize = "12px"
 
-            row_dict["date"].setText(f"{DAYS[d.weekday()]} {d.day}/{d.month}")
+            row_dict["date"].setText(
+                f"{_day_name(d.weekday())}, {d.day} {_month_name(d.month)} {d.year}"
+            )
             row_dict["date"].setStyleSheet(
                 f"color: {dcol}; font-size: {fsize}; font-weight: {fw}; padding: 4px 6px; {bg}"
             )
@@ -635,7 +637,7 @@ class DashboardPage(QWidget):
     # ─── hijri calendar ──────────────────────────────────────────────────────
 
     def _build_hijri_card(self) -> SectionCard:
-        card = SectionCard("🌙  Kalender Hijriah & Puasa Sunnah")
+        card = SectionCard(t("hijri_title"))
 
         self._hijri_month_lbl = QLabel("—")
         self._hijri_month_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -702,7 +704,7 @@ class DashboardPage(QWidget):
             if item.widget():
                 item.widget().deleteLater()
 
-        DAY_HDR = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"]
+        DAY_HDR = [_day_name(i, short=True) for i in range(7)]
         for col, d in enumerate(DAY_HDR):
             c = "#38bdf8" if col == 4 else th.MUTED
             lbl = QLabel(d)
@@ -714,7 +716,6 @@ class DashboardPage(QWidget):
 
         start_col  = first_greg.weekday()
         ayyamul_info: list[str] = []
-        DAYS_S = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"]
 
         for greg_d, hij_d in month_days:
             delta   = (greg_d - first_greg).days
@@ -754,11 +755,11 @@ class DashboardPage(QWidget):
             self._hijri_grid.addWidget(cell, row, col, Qt.AlignmentFlag.AlignCenter)
 
             if is_ayyamul:
-                ayyamul_info.append(f"{DAYS_S[greg_d.weekday()]} {greg_d.day}/{greg_d.month}")
+                ayyamul_info.append(f"{_day_name(greg_d.weekday(), short=True)} {greg_d.day}/{greg_d.month}")
 
         if ayyamul_info:
             self._ayyamul_lbl.setText(
-                f"Puasa Ayyamul Bidh bulan ini:\n{',  '.join(ayyamul_info)}"
+                f"{t('ayyamul_label')}{',  '.join(ayyamul_info)}"
             )
         else:
             self._ayyamul_lbl.setText("")

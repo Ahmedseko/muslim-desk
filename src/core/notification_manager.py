@@ -18,6 +18,7 @@ _SOUNDS_DIR = Path(__file__).parent.parent.parent / "assets" / "sounds"
 
 class NotificationManager(QObject):
     prayer_arrived = pyqtSignal(str, str)   # english_name, time_str
+    sound_finished = pyqtSignal()           # emitted when adzan sound ends
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -28,6 +29,8 @@ class NotificationManager(QObject):
 
     def play_adzan(self, prayer_name: str = ""):
         if not self.sound_enabled:
+            # no sound — emit immediately so dialog can start its fallback timer
+            self.sound_finished.emit()
             return
         threading.Thread(target=self._play_sound, args=(prayer_name,), daemon=True).start()
 
@@ -55,6 +58,7 @@ class NotificationManager(QObject):
             pass
         finally:
             self._playing = False
+            self.sound_finished.emit()  # queued to main thread via AutoConnection
 
     def stop_sound(self):
         try:
@@ -72,7 +76,8 @@ class PrayerAlertDialog(QDialog):
                  time_str: str, parent=None):
         super().__init__(parent)
         self.prayer_name_en = prayer_name_en
-        self.setWindowTitle("Waktu Sholat")
+        from src.i18n import t as _t
+        self.setWindowTitle(_t("notif_title"))
         self.setWindowFlags(
             Qt.WindowType.Dialog
             | Qt.WindowType.WindowStaysOnTopHint
@@ -84,6 +89,7 @@ class PrayerAlertDialog(QDialog):
 
     def _build(self, name_id: str, time_str: str):
         from src.ui import theme as th
+        from src.i18n import t as _t
         self.setStyleSheet(f"""
             QDialog {{
                 background: {th.SURFACE};
@@ -105,7 +111,7 @@ class PrayerAlertDialog(QDialog):
         top.addWidget(moon)
         title_box = QVBoxLayout()
         title_box.setSpacing(2)
-        lbl_title = QLabel("Waktunya Sholat")
+        lbl_title = QLabel(_t("notif_its_time"))
         lbl_title.setStyleSheet(f"font-size: 13px; font-weight: 600;"
                                  f"color: {th.MUTED}; background: transparent;")
         lbl_name = QLabel(name_id)
@@ -134,7 +140,7 @@ class PrayerAlertDialog(QDialog):
         btn_row.setSpacing(8)
 
         for mins in (5, 10, 15):
-            b = QPushButton(f"⏰ Ingatkan {mins} menit")
+            b = QPushButton(_t("notif_remind", mins))
             b.setStyleSheet(f"""
                 QPushButton {{
                     background: {th.SURFACE_2}; border: 1px solid {th.BORDER};
@@ -148,7 +154,7 @@ class PrayerAlertDialog(QDialog):
 
         root.addLayout(btn_row)
 
-        btn_dismiss = QPushButton("Tutup")
+        btn_dismiss = QPushButton(_t("notif_close"))
         btn_dismiss.setObjectName("Primary")
         btn_dismiss.setStyleSheet(f"""
             QPushButton {{
@@ -171,3 +177,8 @@ class PrayerAlertDialog(QDialog):
         screen = QApplication.primaryScreen().availableGeometry()
         self.move(screen.right() - self.width() - 24,
                   screen.bottom() - self.height() - 24)
+        # Fallback: auto-close after 15 minutes if sound signal never arrives
+        self._fallback = QTimer(self)
+        self._fallback.setSingleShot(True)
+        self._fallback.timeout.connect(self.accept)
+        self._fallback.start(15 * 60 * 1000)

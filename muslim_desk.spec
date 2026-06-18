@@ -3,8 +3,13 @@
 
 import sys
 from pathlib import Path
+from PyInstaller.utils.hooks import collect_data_files
 
 block_cipher = None
+
+# Bundle timezonefinder boundary data + tzdata zone files
+_extra_datas = collect_data_files('timezonefinder')
+_extra_datas += collect_data_files('tzdata')
 
 a = Analysis(
     ['main.py'],
@@ -13,7 +18,7 @@ a = Analysis(
     datas=[
         ('assets', 'assets'),
         ('src', 'src'),
-    ],
+    ] + _extra_datas,
     hiddenimports=[
         'PyQt6.QtCore',
         'PyQt6.QtGui',
@@ -28,6 +33,9 @@ a = Analysis(
         'charset_normalizer',
         'idna',
         'hijri_converter',
+        'timezonefinder',
+        'zoneinfo',
+        'tzdata',
         'winsound',
         'winreg',
         'json',
@@ -42,7 +50,6 @@ a = Analysis(
         'tkinter',
         'unittest',
         'test',
-        'distutils',
         'setuptools',
         'pip',
         'numpy',

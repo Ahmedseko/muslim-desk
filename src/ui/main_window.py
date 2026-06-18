@@ -18,11 +18,13 @@ from ..data.settings_manager import Settings, save as save_settings
 from ..core.notification_manager import NotificationManager, PrayerAlertDialog
 from ..core import prayer_calculator as pc
 from .. import APP_NAME, VERSION
+from ..i18n import t, prayer_name as i18n_prayer_name
 
-MENU = [
-    ("🕌", "Dashboard",  "Dashboard"),
-    ("🧭", "Kiblat",      "Qibla"),
-    ("⚙️", "Pengaturan",  "Settings"),
+# (icon, i18n_key, page_key)  — labels translated at _build() time
+_MENU_DEF = [
+    ("🕌", "nav_dashboard",  "Dashboard"),
+    ("🧭", "nav_qibla",      "Qibla"),
+    ("⚙️", "nav_settings",   "Settings"),
 ]
 
 
@@ -69,9 +71,9 @@ class MainWindow(QMainWindow):
         self._tray.setToolTip(APP_NAME)
 
         menu = QMenu()
-        act_show = QAction("Tampilkan", self)
+        act_show = QAction(t("tray_show"), self)
         act_show.triggered.connect(self._show_from_tray)
-        act_quit = QAction("Keluar", self)
+        act_quit = QAction(t("tray_quit"), self)
         act_quit.triggered.connect(QApplication.quit)
         menu.addAction(act_show)
         menu.addSeparator()
@@ -93,8 +95,7 @@ class MainWindow(QMainWindow):
         if self.settings.minimize_to_tray and self._tray is not None:
             event.ignore()
             self.hide()
-            self._tray.showMessage(APP_NAME,
-                                   "Aplikasi berjalan di latar belakang.",
+            self._tray.showMessage(APP_NAME, t("tray_bg_msg"),
                                    self.icon, 2000)
         else:
             event.accept()
@@ -141,8 +142,8 @@ class MainWindow(QMainWindow):
 
         # Nav buttons — use the page key (3rd element) not the display label
         self._nav_buttons: list[NavButton] = []
-        for icon_char, label, page_key in MENU:
-            btn = NavButton(icon_char, label)
+        for icon_char, label_key, page_key in _MENU_DEF:
+            btn = NavButton(icon_char, t(label_key))
             btn.clicked.connect(lambda _, k=page_key: self._on_nav(k))
             self._nav_buttons.append(btn)
             sl.addWidget(btn)
@@ -181,7 +182,7 @@ class MainWindow(QMainWindow):
     # ─── navigation ──────────────────────────────────────────────────────────
 
     def _on_nav(self, key: str):
-        for i, (_, _, k) in enumerate(MENU):
+        for i, (_, _, k) in enumerate(_MENU_DEF):
             self._nav_buttons[i].setChecked(k == key)
         page = self._pages.get(key)
         if page is None:
@@ -212,8 +213,14 @@ class MainWindow(QMainWindow):
             actual = th.resolve_system_theme()
         th.apply_theme(actual)
         QApplication.instance().setStyleSheet(th.STYLESHEET)
-        # Rebuild UI with new theme
-        current = next((k for i, (_, _, k) in enumerate(MENU)
+        self._rebuild_ui()
+
+    def apply_language_live(self):
+        """Rebuild UI after language change (no theme change needed)."""
+        self._rebuild_ui()
+
+    def _rebuild_ui(self):
+        current = next((k for i, (_, _, k) in enumerate(_MENU_DEF)
                         if self._nav_buttons[i].isChecked()), "Dashboard")
         self._build()
         self._on_nav(current)
@@ -256,16 +263,37 @@ class MainWindow(QMainWindow):
             self._triggered = {k for k in self._triggered if str(today) in k}
 
     def _fire_prayer_alert(self, prayer_en: str, time_str: str):
-        name_id = pc.PRAYER_NAMES_ID.get(prayer_en, prayer_en)
-        self._notif.play_adzan(prayer_en)
+        name_id = i18n_prayer_name(prayer_en) or pc.PRAYER_NAMES_ID.get(prayer_en, prayer_en)
 
         dlg = PrayerAlertDialog(name_id, prayer_en, time_str, self)
         dlg.remind_requested.connect(lambda m, n=prayer_en, t=time_str: self._schedule_reminder(n, t, m))
 
+        # Auto-close dialog when adzan finishes
+        def _on_sound_done():
+            try:
+                if dlg and not dlg.isHidden():
+                    dlg.accept()
+            except RuntimeError:
+                pass  # dialog already destroyed
+
+        self._notif.sound_finished.connect(_on_sound_done)
+
+        def _on_dialog_closed():
+            # Stop adzan sound and disconnect auto-close signal
+            self._notif.stop_sound()
+            try:
+                self._notif.sound_finished.disconnect(_on_sound_done)
+            except Exception:
+                pass
+
+        dlg.finished.connect(_on_dialog_closed)
+
+        self._notif.play_adzan(prayer_en)
+
         if self._tray and not self.isActiveWindow():
             self._tray.showMessage(
-                f"Waktunya Sholat {name_id}",
-                f"Pukul {time_str}",
+                f"{t('tray_prayer_time')} {name_id}",
+                f"{t('tray_at')} {time_str}",
                 self.icon, 8000,
             )
         dlg.show()

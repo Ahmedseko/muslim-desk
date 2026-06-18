@@ -12,6 +12,7 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
 from ..widgets import SectionCard
 from .. import theme as th
 from ...core import prayer_calculator as pc
+from ...i18n import t, set_language, get_language, SUPPORTED as I18N_SUPPORTED
 
 
 class SettingsPage(QWidget):
@@ -63,7 +64,13 @@ class SettingsPage(QWidget):
         )
         # Apply time format live when changed (no need to click Save)
         self._time_fmt_combo.currentIndexChanged.connect(self._apply_time_format_live)
-        app_card.body.addLayout(self._make_hint("Perubahan tema diterapkan setelah disimpan."))
+
+        self._lang_combo = self._add_combo(
+            app_card, "Bahasa / Language",
+            ["id", "en"],
+            ["Indonesia (ID)", "English (EN)"],
+        )
+        app_card.body.addLayout(self._make_hint("Perubahan tema & bahasa diterapkan setelah disimpan."))
         root.addWidget(app_card)
 
         # ── Prayer calculation
@@ -146,13 +153,13 @@ class SettingsPage(QWidget):
             ["Tidak ada pengingat", "5 menit sebelum", "10 menit sebelum", "15 menit sebelum"],
         )
 
-        # ── Per-prayer sound section
+        # ── Per-prayer alarm & sound section
         sep2 = QFrame()
         sep2.setFixedHeight(1)
         sep2.setStyleSheet(f"background: {th.BORDER};")
         notif_card.body.addWidget(sep2)
 
-        lbl_per = QLabel("Suara Adzan per Waktu Sholat")
+        lbl_per = QLabel("Alarm & Suara per Waktu Sholat")
         lbl_per.setStyleSheet(
             f"font-size: 12px; font-weight: 700; color: {th.MUTED}; "
             f"letter-spacing: 1px; background: transparent; margin-top: 4px;"
@@ -160,6 +167,7 @@ class SettingsPage(QWidget):
         notif_card.body.addWidget(lbl_per)
 
         self._prayer_sound_edits: dict[str, QLineEdit] = {}
+        self._prayer_alarm_checks: dict[str, QCheckBox] = {}
         _PRAYER_LABELS = [
             ("Fajr",    "Subuh"),
             ("Dhuhr",   "Dzuhur"),
@@ -170,9 +178,13 @@ class SettingsPage(QWidget):
         for en, id_name in _PRAYER_LABELS:
             row = QHBoxLayout()
             row.setSpacing(6)
+            cb = QCheckBox()
+            cb.setChecked(True)
+            cb.setToolTip(f"Aktifkan alarm untuk {id_name}")
+            cb.setStyleSheet("background: transparent;")
             lbl_p = QLabel(id_name)
             lbl_p.setStyleSheet(
-                f"color: {th.MUTED}; font-size: 13px; min-width: 80px; background: transparent;"
+                f"color: {th.TEXT}; font-size: 13px; min-width: 72px; background: transparent;"
             )
             edit = QLineEdit()
             edit.setPlaceholderText("(gunakan suara global / default)")
@@ -185,24 +197,32 @@ class SettingsPage(QWidget):
             btn_cl.setFixedWidth(70)
             btn_cl.setToolTip("Hapus, gunakan suara global")
             btn_cl.clicked.connect(lambda _, e=edit: e.clear())
+            row.addWidget(cb)
             row.addWidget(lbl_p)
             row.addWidget(edit, 1)
             row.addWidget(btn_br)
             row.addWidget(btn_cl)
             notif_card.body.addLayout(row)
             self._prayer_sound_edits[en] = edit
+            self._prayer_alarm_checks[en] = cb
 
         notif_card.body.addLayout(
             self._make_hint(
-                "Kosong = gunakan suara global di atas. "
-                "Letakkan adzan.wav di assets/sounds/ untuk fallback default."
+                "Centang = aktifkan alarm sholat. "
+                "Kosong = gunakan suara global di atas."
             )
         )
         root.addWidget(notif_card)
 
         # ── Window behavior
         win_card = SectionCard("🖥️  Jendela Aplikasi")
-        self._start_min_cb = QCheckBox("Mulai dalam kondisi diminimalkan")
+
+        self._startup_cb = QCheckBox("Jalankan otomatis saat Windows startup")
+        self._startup_cb.setStyleSheet("background: transparent;")
+        self._startup_cb.stateChanged.connect(self._on_startup_changed)
+        win_card.body.addWidget(self._startup_cb)
+
+        self._start_min_cb = QCheckBox("Mulai dalam kondisi diminimalkan (ke system tray)")
         self._start_min_cb.setStyleSheet("background: transparent;")
         win_card.body.addWidget(self._start_min_cb)
 
@@ -280,6 +300,11 @@ class SettingsPage(QWidget):
         self._status.setAlignment(Qt.AlignmentFlag.AlignRight)
         root.addWidget(self._status)
 
+    def _on_startup_changed(self, state: int):
+        from ...data.settings_manager import set_startup_enabled
+        enabled = (state == 2)  # Qt.CheckState.Checked
+        set_startup_enabled(enabled)
+
     def _apply_time_format_live(self, index: int):
         """Apply time format immediately when combo changes — no Save needed."""
         fmt_keys = ["24h", "12h"]
@@ -305,7 +330,7 @@ class SettingsPage(QWidget):
         self._country_edit.setText(loc.country)
         self._auto_loc_cb.setChecked(False)
         self._on_auto_loc_changed(0)
-        self._status.setText(f"✅ Lokasi diset ke: {loc.city}, {loc.country}")
+        self._status.setText(f"{t('loc_set_to')}{loc.city}, {loc.country}")
 
     # ─── helpers ─────────────────────────────────────────────────────────────
 
@@ -391,6 +416,11 @@ class SettingsPage(QWidget):
         fmt_keys = ["24h", "12h"]
         self._time_fmt_combo.setCurrentIndex(fmt_keys.index(s.time_format) if s.time_format in fmt_keys else 0)
 
+        # Language
+        lang_keys = list(I18N_SUPPORTED)
+        _li = lang_keys.index(s.language) if s.language in lang_keys else 0
+        self._lang_combo.setCurrentIndex(_li)
+
         # Method
         method_keys = list(pc.METHODS.keys())
         midx = method_keys.index(s.method) if s.method in method_keys else 0
@@ -421,7 +451,14 @@ class SettingsPage(QWidget):
         for en, edit in self._prayer_sound_edits.items():
             edit.setText(s.prayer_sounds.get(en, ""))
 
+        for en, cb in self._prayer_alarm_checks.items():
+            cb.setChecked(s.prayer_alarms.get(en, True))
+
         # Window
+        from ...data.settings_manager import is_startup_enabled
+        self._startup_cb.blockSignals(True)
+        self._startup_cb.setChecked(is_startup_enabled())
+        self._startup_cb.blockSignals(False)
         self._start_min_cb.setChecked(s.start_minimized)
         self._tray_cb.setChecked(s.minimize_to_tray)
 
@@ -430,6 +467,7 @@ class SettingsPage(QWidget):
     def _save(self):
         s = self._win.settings
         old_theme = s.theme
+        old_lang  = s.language
 
         # Theme (hardcoded keys)
         _theme_keys = ["dark", "light", "system"]
@@ -440,6 +478,11 @@ class SettingsPage(QWidget):
         _fmt_keys = ["24h", "12h"]
         _fi = self._time_fmt_combo.currentIndex()
         s.time_format = _fmt_keys[_fi] if 0 <= _fi < len(_fmt_keys) else "24h"
+
+        # Language
+        _lang_keys = list(I18N_SUPPORTED)
+        _li = self._lang_combo.currentIndex()
+        s.language = _lang_keys[_li] if 0 <= _li < len(_lang_keys) else "id"
 
         # Method (hardcoded keys)
         _method_keys = list(pc.METHODS.keys())
@@ -468,14 +511,27 @@ class SettingsPage(QWidget):
         for en, edit in self._prayer_sound_edits.items():
             s.prayer_sounds[en] = edit.text().strip()
 
+        for en, cb in self._prayer_alarm_checks.items():
+            s.prayer_alarms[en] = cb.isChecked()
+
         # Window
         s.start_minimized  = self._start_min_cb.isChecked()
         s.minimize_to_tray = self._tray_cb.isChecked()
 
         self._win.on_settings_changed()
 
-        # Apply theme live if changed
-        if s.theme != old_theme:
-            self._win.apply_theme_live(s.theme)
+        # Always sync language module (may have changed)
+        set_language(s.language)
 
-        self._status.setText("✅ Pengaturan berhasil disimpan.")
+        if s.theme != old_theme:
+            # Theme changed → full rebuild (language is already set above)
+            self._win.apply_theme_live(s.theme)
+        elif s.language != old_lang:
+            # Only language changed → rebuild UI
+            self._win.apply_language_live()
+            return  # page is recreated; don't touch self afterwards
+        else:
+            if hasattr(self._win, "_dash") and hasattr(self._win._dash, "refresh"):
+                self._win._dash.refresh()
+
+        self._status.setText(t("saved_ok"))

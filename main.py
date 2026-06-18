@@ -23,6 +23,11 @@ def main():
     app.setOrganizationName("muslim-desk")
 
     settings = sm.load()
+    sm.save(settings)   # persist any safety-net corrections (e.g. prayer_alarms) immediately
+
+    # Initialise language
+    from src.i18n import set_language
+    set_language(settings.language)
 
     # Resolve theme (system → detect from Windows registry)
     display_theme = settings.theme
