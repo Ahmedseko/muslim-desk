@@ -47,7 +47,7 @@ class DashboardPage(QWidget):
         self._today_times: dict[str, str] = {}
         self._today_times_date: date | None = None
         self._next_prayer: str = ""
-        self._schedule_mode = "7days"  # "7days" | "month"
+        self._schedule_mode = "7days"  # "7days" | "15days" | "month"
         self._build()
 
         self._location_detected.connect(self._on_location_detected)
@@ -499,6 +499,14 @@ class DashboardPage(QWidget):
         )
         self._btn_7days.clicked.connect(lambda: self._set_schedule_mode("7days"))
 
+        self._btn_15days = QPushButton(t("schedule_15days"))
+        self._btn_15days.setFixedHeight(26)
+        self._btn_15days.setStyleSheet(
+            f"QPushButton {{ background: {th.SURFACE_2}; border: 1px solid {th.BORDER}; "
+            f"border-radius: 6px; color: {th.MUTED}; font-size: 11px; padding: 2px 10px; }}"
+        )
+        self._btn_15days.clicked.connect(lambda: self._set_schedule_mode("15days"))
+
         self._btn_month = QPushButton(t("schedule_month"))
         self._btn_month.setFixedHeight(26)
         self._btn_month.setStyleSheet(
@@ -508,6 +516,7 @@ class DashboardPage(QWidget):
         self._btn_month.clicked.connect(lambda: self._set_schedule_mode("month"))
 
         toggle_row.addWidget(self._btn_7days)
+        toggle_row.addWidget(self._btn_15days)
         toggle_row.addWidget(self._btn_month)
         card.body.addLayout(toggle_row)
 
@@ -539,8 +548,9 @@ class DashboardPage(QWidget):
             f"QPushButton {{ background: {th.SURFACE_2}; border: 1px solid {th.BORDER}; "
             f"border-radius: 6px; color: {th.MUTED}; font-size: 11px; padding: 2px 10px; }}"
         )
-        self._btn_7days.setStyleSheet(active_style if mode == "7days" else inactive_style)
-        self._btn_month.setStyleSheet(active_style if mode == "month" else inactive_style)
+        self._btn_7days.setStyleSheet(active_style if mode == "7days"  else inactive_style)
+        self._btn_15days.setStyleSheet(active_style if mode == "15days" else inactive_style)
+        self._btn_month.setStyleSheet(active_style if mode == "month"  else inactive_style)
         self._refresh_weekly_schedule()
 
     @staticmethod
@@ -578,6 +588,8 @@ class DashboardPage(QWidget):
 
         if self._schedule_mode == "7days":
             days = [today + timedelta(days=i) for i in range(7)]
+        elif self._schedule_mode == "15days":
+            days = [today + timedelta(days=i) for i in range(15)]
         else:
             year, month = today.year, today.month
             _, days_in_month = calendar.monthrange(year, month)

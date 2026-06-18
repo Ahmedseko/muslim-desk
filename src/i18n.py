@@ -254,6 +254,7 @@ _STRINGS: dict[str, dict[str, str]] = {
 
     # ── Monthly schedule (#5) ────────────────────────────────────────────────
     "schedule_7days":   {"id": "7 Hari",                 "en": "7 Days"},
+    "schedule_15days":  {"id": "15 Hari",                "en": "15 Days"},
     "schedule_month":   {"id": "Bulan Ini",              "en": "This Month"},
 
     # ── Location profiles (#6) ───────────────────────────────────────────────
