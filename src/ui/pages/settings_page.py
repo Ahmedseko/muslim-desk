@@ -4,16 +4,136 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from PyQt6.QtCore import Qt, QUrl
+from PyQt6.QtCore import Qt, QUrl, pyqtSignal
 from PyQt6.QtGui import QDesktopServices
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
-                              QFrame, QPushButton, QComboBox, QSpinBox,
-                              QCheckBox, QLineEdit, QFileDialog, QDoubleSpinBox,
-                              QScrollArea, QGroupBox, QSizePolicy, QInputDialog,
+                              QFrame, QPushButton, QComboBox,
+                              QCheckBox, QLineEdit, QFileDialog,
+                              QScrollArea, QSizePolicy, QInputDialog,
                               QMessageBox, QListWidget, QListWidgetItem)
 
 from ..widgets import SectionCard
 from .. import theme as th
+
+
+class _ModernSpin(QFrame):
+    """Modern −/+ number input — replaces QSpinBox/QDoubleSpinBox."""
+
+    valueChanged = pyqtSignal(float)
+
+    def __init__(self, min_val: float, max_val: float,
+                 step: float = 1.0, decimals: int = 0,
+                 special_zero: str = "", parent=None):
+        super().__init__(parent)
+        self._min = float(min_val)
+        self._max = float(max_val)
+        self._step = float(step)
+        self._decimals = decimals
+        self._special_zero = special_zero
+        self._val = 0.0
+        self._build()
+
+    def _build(self):
+        self.setFixedHeight(38)
+        self.setStyleSheet(
+            f"QFrame {{ background: {th.SURFACE_2}; "
+            f"border: 1px solid {th.BORDER}; border-radius: 8px; }}"
+        )
+        lay = QHBoxLayout(self)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(0)
+
+        btn_style = (
+            f"QPushButton {{ background: transparent; border: none; "
+            f"color: {th.MUTED}; font-size: 17px; font-weight: 600; "
+            f"min-width: 34px; border-radius: 8px; }}"
+            f"QPushButton:hover {{ background: {th.BTN_HOVER}; color: {th.ACCENT}; }}"
+            f"QPushButton:pressed {{ background: {th.BTN_PRESSED}; }}"
+            f"QPushButton:disabled {{ color: {th.BORDER}; }}"
+        )
+
+        self._btn_minus = QPushButton("−")
+        self._btn_minus.setFixedWidth(34)
+        self._btn_minus.setStyleSheet(btn_style)
+        self._btn_minus.clicked.connect(self._decrement)
+        lay.addWidget(self._btn_minus)
+
+        sep_l = QFrame()
+        sep_l.setFixedWidth(1)
+        sep_l.setStyleSheet(f"background: {th.BORDER};")
+        lay.addWidget(sep_l)
+
+        self._edit = QLineEdit()
+        self._edit.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._edit.setStyleSheet(
+            "QLineEdit { background: transparent; border: none; padding: 0 4px; }"
+            "QLineEdit:disabled { color: #555; }"
+        )
+        self._edit.editingFinished.connect(self._on_edited)
+        lay.addWidget(self._edit, 1)
+
+        sep_r = QFrame()
+        sep_r.setFixedWidth(1)
+        sep_r.setStyleSheet(f"background: {th.BORDER};")
+        lay.addWidget(sep_r)
+
+        self._btn_plus = QPushButton("+")
+        self._btn_plus.setFixedWidth(34)
+        self._btn_plus.setStyleSheet(btn_style)
+        self._btn_plus.clicked.connect(self._increment)
+        lay.addWidget(self._btn_plus)
+
+        self._refresh_text()
+
+    def _refresh_text(self):
+        if self._special_zero and self._val == 0.0:
+            self._edit.setText(self._special_zero)
+        elif self._decimals == 0:
+            self._edit.setText(str(int(round(self._val))))
+        else:
+            self._edit.setText(f"{self._val:.{self._decimals}f}")
+
+    def _clamp(self, v: float) -> float:
+        return max(self._min, min(self._max, round(v, max(self._decimals, 6))))
+
+    def _increment(self):
+        self._val = self._clamp(self._val + self._step)
+        self._refresh_text()
+        self.valueChanged.emit(self._val)
+
+    def _decrement(self):
+        self._val = self._clamp(self._val - self._step)
+        self._refresh_text()
+        self.valueChanged.emit(self._val)
+
+    def _on_edited(self):
+        txt = self._edit.text().strip().replace(",", ".")
+        if self._special_zero and txt.lower() in (self._special_zero.lower(), "0", ""):
+            self._val = 0.0
+        else:
+            try:
+                self._val = self._clamp(float(txt))
+            except ValueError:
+                pass
+        self._refresh_text()
+        self.valueChanged.emit(self._val)
+
+    def value(self) -> float:
+        return self._val
+
+    def setValue(self, v: float):
+        self._val = self._clamp(float(v))
+        self._refresh_text()
+
+    def setEnabled(self, enabled: bool):
+        super().setEnabled(enabled)
+        for w in (self._btn_minus, self._btn_plus, self._edit):
+            w.setEnabled(enabled)
+        alpha = "1px solid " + th.BORDER if enabled else "1px solid " + th.SURFACE_2
+        self.setStyleSheet(
+            f"QFrame {{ background: {th.SURFACE_2 if enabled else th.SURFACE}; "
+            f"border: {alpha}; border-radius: 8px; }}"
+        )
 from ...core import prayer_calculator as pc
 from ...i18n import t, set_language, get_language, SUPPORTED as I18N_SUPPORTED
 from ...i18n import prayer_name as _pname
@@ -97,10 +217,7 @@ class SettingsPage(QWidget):
         imsak_row = QHBoxLayout()
         lbl_imsak = QLabel(t("lbl_imsak_min"))
         lbl_imsak.setStyleSheet(f"color: {th.MUTED}; min-width: 180px; background: transparent;")
-        self._imsak_spin = QSpinBox()
-        self._imsak_spin.setRange(0, 30)
-        self._imsak_spin.setSingleStep(1)
-        self._imsak_spin.setSpecialValueText(t("imsak_off"))
+        self._imsak_spin = _ModernSpin(0, 30, step=1, decimals=0, special_zero=t("imsak_off"))
         imsak_row.addWidget(lbl_imsak)
         imsak_row.addWidget(self._imsak_spin, 1)
         calc_card.body.addLayout(imsak_row)
@@ -520,14 +637,12 @@ class SettingsPage(QWidget):
         return combo
 
     def _add_double_spin(self, card: SectionCard, label: str,
-                         min_val: float, max_val: float, decimals: int) -> QDoubleSpinBox:
+                         min_val: float, max_val: float, decimals: int) -> "_ModernSpin":
         row = QHBoxLayout()
         lbl = QLabel(label)
         lbl.setStyleSheet(f"color: {th.MUTED}; min-width: 180px; background: transparent;")
-        spin = QDoubleSpinBox()
-        spin.setRange(min_val, max_val)
-        spin.setDecimals(decimals)
-        spin.setSingleStep(0.1 if decimals > 0 else 1.0)
+        step = 0.1 if decimals > 0 else 1.0
+        spin = _ModernSpin(min_val, max_val, step=step, decimals=decimals)
         row.addWidget(lbl)
         row.addWidget(spin, 1)
         card.body.addLayout(row)
