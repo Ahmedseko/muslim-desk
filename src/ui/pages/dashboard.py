@@ -639,31 +639,32 @@ class DashboardPage(QWidget):
             is_ayyamul = hd_d in (13, 14, 15)
             is_event   = bool(pc.get_islamic_event(hm_d, hd_d, lang))
 
+            # Date-cell styling mirrors calendar day cells; prayer-time cells stay transparent
             if is_today:
-                bg            = f"background: {th.ACCENT_DK};"
-                dcol          = "#ffffff"
-                fw            = "700"
-                tcol_override = "#ffffff"
+                date_bg = f"background: {th.ACCENT_DK}; border-radius: 4px;"
+                dcol    = "#ffffff"
+                dfw     = "700"
             elif is_ayyamul:
-                bg            = "background: rgba(245,158,11,0.18);"
-                dcol          = "#f59e0b"
-                fw            = "600"
-                tcol_override = None
+                date_bg = "background: rgba(245,158,11,0.18); border-radius: 4px;"
+                dcol    = "#f59e0b"
+                dfw     = "600"
             elif is_event:
-                bg            = "background: rgba(167,139,250,0.18);"
-                dcol          = "#a78bfa"
-                fw            = "600"
-                tcol_override = None
+                date_bg = "background: rgba(167,139,250,0.18); border-radius: 4px;"
+                dcol    = "#a78bfa"
+                dfw     = "600"
             else:
-                bg            = "background: transparent;"
-                dcol          = "#38bdf8" if is_friday else th.MUTED
-                fw            = "500"
-                tcol_override = None
+                date_bg = "background: transparent;"
+                dcol    = "#38bdf8" if is_friday else th.MUTED
+                dfw     = "500"
+
+            tfw = "700" if is_today else "500"
 
             date_txt = f"{_day_name(d.weekday(), short=True)}, {d.day} {_month_name(d.month, short=True)}"
             dlbl = QLabel(date_txt)
             dlbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            dlbl.setStyleSheet(f"color: {dcol}; font-size: 11px; font-weight: {fw}; padding: 4px 4px; {bg}")
+            dlbl.setStyleSheet(
+                f"color: {dcol}; font-size: 11px; font-weight: {dfw}; padding: 4px 6px; {date_bg}"
+            )
             grid.addWidget(dlbl, row_idx + 2, 0)
 
             try:
@@ -673,18 +674,20 @@ class DashboardPage(QWidget):
                 )
                 times["Dhuha"] = self._calc_dhuha(times)
                 for col_idx, (key, color) in enumerate(zip(PKEY, PCOL)):
-                    cell_color = tcol_override if tcol_override else color
                     lbl = QLabel(_fmt_time(times.get(key, "--:--"), tfmt))
                     lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
                     lbl.setStyleSheet(
-                        f"color: {cell_color}; font-size: 11px; font-weight: {fw}; padding: 4px 1px; {bg}"
+                        f"color: {color}; font-size: 11px; font-weight: {tfw}; "
+                        f"padding: 4px 1px; background: transparent;"
                     )
                     grid.addWidget(lbl, row_idx + 2, col_idx + 1)
             except Exception:
                 for col_idx in range(6):
                     lbl = QLabel("--")
                     lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                    lbl.setStyleSheet(f"color: {th.MUTED}; font-size: 11px; padding: 4px 1px; {bg}")
+                    lbl.setStyleSheet(
+                        f"color: {th.MUTED}; font-size: 11px; padding: 4px 1px; background: transparent;"
+                    )
                     grid.addWidget(lbl, row_idx + 2, col_idx + 1)
 
         self._schedule_grid_layout.addWidget(grid_widget)
