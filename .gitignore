@@ -37,6 +37,10 @@ MANIFEST
 release/
 screenshot*.png
 
+# Audio files — too large for GitHub; bundled in installer from assets/sounds/
+assets/sounds/*.wav
+assets/sounds/*.mp3
+
 # Installer logs
 pip-log.txt
 pip-delete-this-directory.txt

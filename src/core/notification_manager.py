@@ -53,12 +53,20 @@ class NotificationManager(QObject):
             self.sound_finished.emit()
 
     def _get_sound_path(self, prayer_name: str) -> str | None:
+        # 1. Per-prayer custom path (set by user in Settings)
         per = self.prayer_sounds.get(prayer_name, "")
         if per and Path(per).exists():
             return per
+        # 2. Global custom path (set by user in Settings)
         if self.custom_sound_path and Path(self.custom_sound_path).exists():
             return self.custom_sound_path
-        for name in ("adzan.mp3", "adzan.wav", "notification.mp3", "notification.wav"):
+        # 3. Bundled Fajr-specific adzan (longer, special subuh recitation)
+        if prayer_name == "Fajr":
+            p = _SOUNDS_DIR / "adzan_fajr.wav"
+            if p.exists():
+                return str(p)
+        # 4. Bundled general adzan (all other prayers)
+        for name in ("adzan.wav", "adzan.mp3", "notification.mp3", "notification.wav"):
             p = _SOUNDS_DIR / name
             if p.exists():
                 return str(p)
