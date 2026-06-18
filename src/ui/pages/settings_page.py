@@ -4,7 +4,8 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QUrl
+from PyQt6.QtGui import QDesktopServices
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                               QFrame, QPushButton, QComboBox, QSpinBox,
                               QCheckBox, QLineEdit, QFileDialog, QDoubleSpinBox,
@@ -222,7 +223,7 @@ class SettingsPage(QWidget):
 
         self._prayer_sound_edits: dict[str, QLineEdit] = {}
         self._prayer_alarm_checks: dict[str, QCheckBox] = {}
-        for en in ("Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"):
+        for en in ("Fajr", "Dhuhr", "Asr", "Maghrib", "Isha", "Sunrise"):
             loc_name = _pname(en)
             row = QHBoxLayout()
             row.setSpacing(6)
@@ -276,11 +277,38 @@ class SettingsPage(QWidget):
         # ── About
         about_card = SectionCard(t("sec_about"))
 
+        ver_row = QHBoxLayout()
         lbl_name = QLabel(f"Muslim Desk  v{VERSION}")
         lbl_name.setStyleSheet(
             f"font-size: 16px; font-weight: 800; color: {th.ACCENT}; background: transparent;"
         )
-        about_card.body.addWidget(lbl_name)
+        ver_row.addWidget(lbl_name)
+
+        # Update available badge (hidden by default)
+        self._update_frame = QFrame()
+        self._update_frame.setStyleSheet(
+            f"QFrame {{ background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.45); "
+            f"border-radius: 8px; padding: 2px 0; }}"
+        )
+        update_inner = QHBoxLayout(self._update_frame)
+        update_inner.setContentsMargins(10, 6, 10, 6)
+        update_inner.setSpacing(10)
+        self._update_avail_lbl = QLabel("")
+        self._update_avail_lbl.setStyleSheet(
+            f"color: #10b981; font-size: 12px; font-weight: 600; background: transparent; border: none;"
+        )
+        update_inner.addWidget(self._update_avail_lbl)
+        self._btn_update_dl = QPushButton(t("update_download"))
+        self._btn_update_dl.setObjectName("Primary")
+        self._btn_update_dl.setFixedHeight(26)
+        self._btn_update_dl.clicked.connect(self._open_update_url)
+        update_inner.addWidget(self._btn_update_dl)
+        self._update_frame.setVisible(False)
+        self._update_url = ""
+
+        ver_row.addStretch()
+        ver_row.addWidget(self._update_frame)
+        about_card.body.addLayout(ver_row)
 
         lbl_desc = QLabel(t("about_desc"))
         lbl_desc.setStyleSheet(f"color: {th.MUTED}; font-size: 13px; background: transparent;")
@@ -336,6 +364,15 @@ class SettingsPage(QWidget):
         self._status.setStyleSheet(f"font-size: 12px; color: {th.GOOD}; background: transparent;")
         self._status.setAlignment(Qt.AlignmentFlag.AlignRight)
         root.addWidget(self._status)
+
+    def show_update_available(self, version: str, url: str):
+        self._update_url = url
+        self._update_avail_lbl.setText(t("update_available", version))
+        self._update_frame.setVisible(True)
+
+    def _open_update_url(self):
+        if self._update_url:
+            QDesktopServices.openUrl(QUrl(self._update_url))
 
     def _restart_app(self):
         import sys
@@ -601,7 +638,8 @@ class SettingsPage(QWidget):
             edit.setText(s.prayer_sounds.get(en, ""))
 
         for en, cb in self._prayer_alarm_checks.items():
-            cb.setChecked(s.prayer_alarms.get(en, True))
+            default_on = (en != "Sunrise")
+            cb.setChecked(s.prayer_alarms.get(en, default_on))
 
         # Window
         if self._startup_cb is not None and sys.platform == "win32":
@@ -613,6 +651,10 @@ class SettingsPage(QWidget):
         self._tray_cb.setChecked(s.minimize_to_tray)
 
         self._status.setText("")
+
+        # Restore update badge if update was already found
+        if getattr(self._win, "_latest_version", ""):
+            self.show_update_available(self._win._latest_version, self._win._latest_url)
 
     def _save(self):
         s = self._win.settings

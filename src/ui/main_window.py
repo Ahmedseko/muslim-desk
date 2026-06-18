@@ -8,8 +8,7 @@ from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QObject
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QHBoxLayout, QVBoxLayout,
                               QLabel, QFrame, QStackedWidget, QSystemTrayIcon,
                               QMenu, QApplication, QPushButton)
-from PyQt6.QtGui import QAction, QDesktopServices
-from PyQt6.QtCore import QUrl
+from PyQt6.QtGui import QAction
 
 from . import theme as th
 from .widgets import NavButton, make_app_icon
@@ -59,6 +58,10 @@ class MainWindow(QMainWindow):
         self._notif.custom_sound_path   = settings.custom_sound_path
         self._notif.prayer_sounds       = dict(settings.prayer_sounds)
         self._notif.toast_enabled       = settings.toast_enabled
+
+        # Latest update info (populated by background check, shown in Settings)
+        self._latest_version: str = ""
+        self._latest_url:     str = ""
 
         # Track which prayers already triggered today
         self._triggered: set[str] = set()
@@ -179,14 +182,10 @@ class MainWindow(QMainWindow):
 
         root.addWidget(side)
 
-        # ── Right column: update banner (hidden) + stacked pages
+        # ── Right column: stacked pages
         right_col = QVBoxLayout()
         right_col.setContentsMargins(0, 0, 0, 0)
         right_col.setSpacing(0)
-
-        self._update_bar = self._make_update_bar()
-        self._update_bar.hide()
-        right_col.addWidget(self._update_bar)
 
         self.stack = QStackedWidget()
         right_col.addWidget(self.stack, 1)
@@ -212,40 +211,6 @@ class MainWindow(QMainWindow):
 
         self._on_nav("Dashboard")
 
-    def _make_update_bar(self) -> QFrame:
-        bar = QFrame()
-        bar.setObjectName("UpdateBar")
-        bar.setStyleSheet(
-            f"QFrame#UpdateBar {{ background: {th.SURFACE}; "
-            f"border-bottom: 1px solid {th.ACCENT_DK}; "
-            f"border-left: 4px solid {th.ACCENT}; }}"
-        )
-        bar.setFixedHeight(46)
-
-        layout = QHBoxLayout(bar)
-        layout.setContentsMargins(16, 0, 12, 0)
-        layout.setSpacing(12)
-
-        self._update_lbl = QLabel("")
-        self._update_lbl.setStyleSheet(
-            f"color: {th.TEXT}; font-size: 13px; background: transparent;"
-        )
-        layout.addWidget(self._update_lbl, 1)
-
-        btn_dl = QPushButton(t("update_download"))
-        btn_dl.setObjectName("Primary")
-        btn_dl.setFixedHeight(28)
-        btn_dl.clicked.connect(self._open_download)
-        layout.addWidget(btn_dl)
-
-        btn_dismiss = QPushButton(t("update_later"))
-        btn_dismiss.setFixedHeight(28)
-        btn_dismiss.clicked.connect(bar.hide)
-        layout.addWidget(btn_dismiss)
-
-        self._update_url = ""
-        return bar
-
     # ─── auto-update ─────────────────────────────────────────────────────────
 
     def _start_update_check(self):
@@ -261,13 +226,10 @@ class MainWindow(QMainWindow):
             self._update_sig.found.emit(version, url)
 
     def _on_update_found(self, version: str, url: str):
-        self._update_url = url
-        self._update_lbl.setText(t("update_available", version))
-        self._update_bar.show()
-
-    def _open_download(self):
-        if self._update_url:
-            QDesktopServices.openUrl(QUrl(self._update_url))
+        self._latest_version = version
+        self._latest_url = url
+        if hasattr(self, "_settings_page"):
+            self._settings_page.show_update_available(version, url)
 
     # ─── navigation ──────────────────────────────────────────────────────────
 

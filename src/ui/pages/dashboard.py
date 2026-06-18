@@ -226,57 +226,6 @@ class DashboardPage(QWidget):
 
         root.addLayout(cards_row)
 
-        # ── Imsak row (always shown when imsak_minutes > 0)
-        self._imsak_card = QFrame()
-        self._imsak_card.setObjectName("Card")
-        imsak_layout = QHBoxLayout(self._imsak_card)
-        imsak_layout.setContentsMargins(20, 10, 20, 10)
-        imsak_layout.setSpacing(12)
-
-        imsak_icon = QLabel("🌙")
-        imsak_icon.setStyleSheet("font-size: 16px; background: transparent;")
-        lbl_imsak = QLabel(t("imsak_row"))
-        lbl_imsak.setStyleSheet(f"font-size: 13px; color: {th.MUTED}; background: transparent;")
-        self._imsak_time = QLabel("--:--")
-        self._imsak_time.setStyleSheet(
-            f"font-size: 16px; font-weight: 700; color: {th.PRAYER_COLORS['Fajr']}; background: transparent;"
-        )
-
-        imsak_layout.addWidget(imsak_icon)
-        imsak_layout.addWidget(lbl_imsak)
-        imsak_layout.addStretch()
-        imsak_layout.addWidget(self._imsak_time)
-        self._imsak_card.setVisible(False)
-        root.addWidget(self._imsak_card)
-
-        # ── Syuruk row (Sunrise)
-        syuruk_card = QFrame()
-        syuruk_card.setObjectName("Card")
-        syuruk_layout = QHBoxLayout(syuruk_card)
-        syuruk_layout.setContentsMargins(20, 12, 20, 12)
-        syuruk_layout.setSpacing(12)
-
-        sun_icon = QLabel("🌅")
-        sun_icon.setStyleSheet("font-size: 18px; background: transparent;")
-        lbl_syuruk = QLabel(t("sunrise_row"))
-        lbl_syuruk.setStyleSheet(f"font-size: 13px; color: {th.MUTED}; background: transparent;")
-        self._syuruk_time = QLabel("--:--")
-        self._syuruk_time.setStyleSheet(f"font-size: 16px; font-weight: 700; "
-                                         f"color: {th.PRAYER_COLORS['Sunrise']}; background: transparent;")
-
-        syuruk_layout.addWidget(sun_icon)
-        syuruk_layout.addWidget(lbl_syuruk)
-        syuruk_layout.addStretch()
-        syuruk_layout.addWidget(self._syuruk_time)
-
-        self._syuruk_alarm_btn = QPushButton(t("alarm_inactive"))
-        self._syuruk_alarm_btn.setObjectName("AlarmOff")
-        self._syuruk_alarm_btn.setFixedHeight(26)
-        self._syuruk_alarm_btn.clicked.connect(self._toggle_syuruk)
-        syuruk_layout.addWidget(self._syuruk_alarm_btn)
-
-        root.addWidget(syuruk_card)
-
         # ── Bottom two-panel section
         bottom = QHBoxLayout()
         bottom.setSpacing(12)
@@ -326,12 +275,6 @@ class DashboardPage(QWidget):
             self._status.setText(t("calc_failed") + str(e))
             return
 
-        # Update imsak row
-        imsak_on = (s.imsak_minutes > 0)
-        self._imsak_card.setVisible(imsak_on)
-        if imsak_on:
-            self._imsak_time.setText(_fmt_time(self._today_times.get("Imsak", "--:--"), s.time_format))
-
         # Update cards
         tfmt = s.time_format
         self._clock.set_format(tfmt)
@@ -339,13 +282,6 @@ class DashboardPage(QWidget):
             raw = self._today_times.get(name, "--:--")
             card.set_time(_fmt_time(raw, tfmt))
             card.set_alarm(s.prayer_alarms.get(name, True))
-
-        self._syuruk_time.setText(_fmt_time(self._today_times.get("Sunrise", "--:--"), tfmt))
-        syuruk_on = s.prayer_alarms.get("Sunrise", False)
-        self._syuruk_alarm_btn.setObjectName("AlarmOn" if syuruk_on else "AlarmOff")
-        self._syuruk_alarm_btn.setText(t("alarm_active") if syuruk_on else t("alarm_inactive"))
-        self._syuruk_alarm_btn.style().unpolish(self._syuruk_alarm_btn)
-        self._syuruk_alarm_btn.style().polish(self._syuruk_alarm_btn)
 
         self._refresh_weekly_schedule()
         self._refresh_hijri_calendar()
@@ -544,18 +480,6 @@ class DashboardPage(QWidget):
         self._win.settings.prayer_alarms[prayer_en] = enabled
         from ...data.settings_manager import save as save_s
         save_s(self._win.settings)
-
-    def _toggle_syuruk(self):
-        s = self._win.settings
-        current = s.prayer_alarms.get("Sunrise", False)
-        new_val = not current
-        s.prayer_alarms["Sunrise"] = new_val
-        self._syuruk_alarm_btn.setObjectName("AlarmOn" if new_val else "AlarmOff")
-        self._syuruk_alarm_btn.setText(t("alarm_active") if new_val else t("alarm_inactive"))
-        self._syuruk_alarm_btn.style().unpolish(self._syuruk_alarm_btn)
-        self._syuruk_alarm_btn.style().polish(self._syuruk_alarm_btn)
-        from ...data.settings_manager import save as save_s
-        save_s(s)
 
     # ─── weekly / monthly schedule ───────────────────────────────────────────
 
