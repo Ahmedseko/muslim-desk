@@ -3,7 +3,7 @@
 
 #define AppName      "Muslim Desk"
 #define AppShort     "MuslimDesk"
-#define AppVersion   "1.1.0"
+#define AppVersion   "1.2.0"
 #define AppPublisher "Ahmed Seko"
 #define AppExeName   "MuslimDesk.exe"
 #define AppURL       ""
