@@ -183,9 +183,9 @@ class DzikirPage(QWidget):
         arabic = QLabel(item["arabic"])
         arabic.setAlignment(Qt.AlignmentFlag.AlignRight)
         arabic.setStyleSheet(
-            f"font-size: 22px; color: {th.ACCENT}; "
-            f"font-family: 'Amiri', 'Traditional Arabic', 'Arial'; "
-            f"background: transparent; line-height: 1.6;"
+            f"font-size: 28px; color: {th.HEADING}; "
+            f"font-family: 'Amiri', 'Traditional Arabic', 'Arial Unicode MS', 'Arial'; "
+            f"background: transparent; line-height: 2.2; padding: 6px 0;"
         )
         arabic.setWordWrap(True)
         lay.addWidget(arabic)
@@ -193,7 +193,7 @@ class DzikirPage(QWidget):
         # Transliteration
         translit = QLabel(item["translit"])
         translit.setStyleSheet(
-            f"font-size: 12px; color: {th.MUTED}; font-style: italic; background: transparent;"
+            f"font-size: 13px; color: {th.MUTED}; font-style: italic; background: transparent;"
         )
         translit.setWordWrap(True)
         lay.addWidget(translit)
@@ -203,7 +203,7 @@ class DzikirPage(QWidget):
         meaning = item.get(meaning_key, item.get("meaning_id", ""))
         if meaning:
             lbl_meaning = QLabel(f"{t('dzikir_meaning')} {meaning}")
-            lbl_meaning.setStyleSheet(f"font-size: 12px; color: {th.TEXT}; background: transparent;")
+            lbl_meaning.setStyleSheet(f"font-size: 13px; color: {th.TEXT}; background: transparent;")
             lbl_meaning.setWordWrap(True)
             lay.addWidget(lbl_meaning)
 
