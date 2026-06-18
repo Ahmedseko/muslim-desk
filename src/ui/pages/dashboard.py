@@ -645,11 +645,11 @@ class DashboardPage(QWidget):
                 dcol    = "#ffffff"
                 dfw     = "700"
             elif is_ayyamul:
-                date_bg = "background: rgba(245,158,11,0.18); border-radius: 4px;"
+                date_bg = "background: rgba(245,158,11,0.20); border: 1px solid rgba(245,158,11,0.55); border-radius: 4px;"
                 dcol    = "#f59e0b"
                 dfw     = "600"
             elif is_event:
-                date_bg = "background: rgba(167,139,250,0.18); border-radius: 4px;"
+                date_bg = "background: rgba(167,139,250,0.18); border: 1px solid rgba(167,139,250,0.55); border-radius: 4px;"
                 dcol    = "#a78bfa"
                 dfw     = "600"
             else:
