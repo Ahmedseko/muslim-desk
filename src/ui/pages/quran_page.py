@@ -167,7 +167,7 @@ class QuranPage(QWidget):
         self._surah_info = QLabel("")
         self._surah_info.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._surah_info.setStyleSheet(
-            f"color: {th.ACCENT}; font-size: 13px; font-weight: 700; "
+            f"color: {th.ACCENT}; font-size: 15px; font-weight: 700; "
             f"background: transparent;"
         )
         root.addWidget(self._surah_info)
@@ -176,9 +176,9 @@ class QuranPage(QWidget):
         self._bismillah_lbl = QLabel("")
         self._bismillah_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._bismillah_lbl.setStyleSheet(
-            f"font-size: 24px; color: {th.ACCENT}; "
+            f"font-size: 34px; color: {th.ACCENT}; "
             f"font-family: 'Amiri', 'Traditional Arabic', 'Arial'; "
-            f"background: transparent; padding: 10px 0;"
+            f"background: transparent; padding: 14px 0;"
         )
         root.addWidget(self._bismillah_lbl)
 
@@ -191,7 +191,7 @@ class QuranPage(QWidget):
         self._verse_container.setStyleSheet("background: transparent;")
         self._verse_layout = QVBoxLayout(self._verse_container)
         self._verse_layout.setContentsMargins(0, 0, 8, 0)
-        self._verse_layout.setSpacing(2)
+        self._verse_layout.setSpacing(6)
 
         self._verse_scroll.setWidget(self._verse_container)
         root.addWidget(self._verse_scroll, 1)
@@ -342,18 +342,17 @@ class QuranPage(QWidget):
             f"border-radius: 8px; margin: 1px 0; }}"
         )
         lay = QVBoxLayout(frame)
-        lay.setContentsMargins(16, 12, 16, 12)
-        lay.setSpacing(6)
+        lay.setContentsMargins(20, 16, 20, 16)
+        lay.setSpacing(10)
 
-        # Verse number badge + arabic
+        # Verse number badge
         top_row = QHBoxLayout()
-
         badge = QLabel(str(num))
-        badge.setFixedSize(28, 28)
+        badge.setFixedSize(34, 34)
         badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
         badge.setStyleSheet(
             f"background: {th.SURFACE_2}; border: 1px solid {th.BORDER}; "
-            f"border-radius: 14px; color: {th.MUTED}; font-size: 11px; font-weight: 700;"
+            f"border-radius: 17px; color: {th.MUTED}; font-size: 12px; font-weight: 700;"
         )
         top_row.addWidget(badge)
         top_row.addStretch()
@@ -364,9 +363,9 @@ class QuranPage(QWidget):
         ar_lbl.setAlignment(Qt.AlignmentFlag.AlignRight)
         ar_lbl.setWordWrap(True)
         ar_lbl.setStyleSheet(
-            f"font-size: 20px; line-height: 2.0; color: {th.HEADING}; "
+            f"font-size: 28px; line-height: 2.2; color: {th.HEADING}; "
             f"font-family: 'Amiri', 'Traditional Arabic', 'Arial Unicode MS', 'Arial'; "
-            f"background: transparent; padding: 4px 0;"
+            f"background: transparent; padding: 6px 0;"
         )
         lay.addWidget(ar_lbl)
 
@@ -374,8 +373,8 @@ class QuranPage(QWidget):
         tr_lbl = QLabel(translation)
         tr_lbl.setWordWrap(True)
         tr_lbl.setStyleSheet(
-            f"font-size: 12px; color: {th.MUTED}; background: transparent; "
-            f"padding: 2px 0; line-height: 1.5;"
+            f"font-size: 13px; color: {th.MUTED}; background: transparent; "
+            f"padding: 2px 0; line-height: 1.6;"
         )
         lay.addWidget(tr_lbl)
 
