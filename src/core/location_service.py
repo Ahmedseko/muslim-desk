@@ -4,16 +4,45 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
+# Maps ISO 3166-1 alpha-2 country code → recommended prayer calculation method.
+# Fallback for unmapped countries: MWL (Muslim World League — most universal).
+_COUNTRY_METHOD: dict[str, str] = {
+    # Indonesia
+    "ID": "Kemenag",
+    # Saudi Arabia & Gulf
+    "SA": "Makkah", "AE": "Makkah", "KW": "Makkah", "BH": "Makkah",
+    "QA": "Makkah", "OM": "Makkah", "YE": "Makkah",
+    # Egypt, North Africa & Levant
+    "EG": "Egypt", "LY": "Egypt", "DZ": "Egypt", "MA": "Egypt",
+    "TN": "Egypt", "SD": "Egypt", "JO": "Egypt", "SY": "Egypt",
+    "IQ": "Egypt", "LB": "Egypt", "PS": "Egypt",
+    # South Asia
+    "PK": "Karachi", "AF": "Karachi", "IN": "Karachi", "BD": "Karachi",
+    # North America
+    "US": "ISNA", "CA": "ISNA",
+    # Southeast Asia — Singapore MUIS method
+    "SG": "Singapore", "MY": "Singapore", "BN": "Singapore",
+    # Iran
+    "IR": "Tehran",
+    # Turkey — MWL is used (Diyanet not in METHODS list)
+}
+
+
+def method_for_country(country_code: str) -> str:
+    """Return the recommended prayer calculation method for an ISO country code."""
+    return _COUNTRY_METHOD.get(country_code.upper(), "MWL")
+
 
 @dataclass
 class LocationInfo:
-    latitude: float      = -6.2088
-    longitude: float     = 106.8456
-    city: str            = "Jakarta"
-    country: str         = "Indonesia"
-    timezone: float      = 7.0
+    latitude:      float = -6.2088
+    longitude:     float = 106.8456
+    city:          str   = "Jakarta"
+    country:       str   = "Indonesia"
+    country_code:  str   = "ID"
+    timezone:      float = 7.0
     timezone_name: str   = "Asia/Jakarta"
-    altitude: float      = 0.0
+    altitude:      float = 0.0
 
     def display_name(self) -> str:
         return f"{self.city}, {self.country}"
@@ -29,7 +58,7 @@ def detect_location(timeout: int = 6) -> LocationInfo:
         import requests
         r = requests.get(
             "http://ip-api.com/json/",
-            params={"fields": "lat,lon,city,country,timezone,offset,status,message"},
+            params={"fields": "lat,lon,city,country,countryCode,timezone,offset,status,message"},
             timeout=timeout,
         )
         data = r.json()
@@ -41,6 +70,7 @@ def detect_location(timeout: int = 6) -> LocationInfo:
             longitude=float(data["lon"]),
             city=data.get("city", "Unknown"),
             country=data.get("country", ""),
+            country_code=data.get("countryCode", ""),
             timezone=tz_hours,
             timezone_name=data.get("timezone", ""),
         )
@@ -78,28 +108,14 @@ def local_timezone_offset() -> float:
 
 
 def app_now(app_timezone: float):
-    """Current datetime adjusted to the app's configured timezone.
-
-    Fixes the case where the system clock is in a different timezone than
-    the selected prayer location (e.g. laptop on WIB but location is WITA).
-    """
+    """Current datetime adjusted to the app's configured timezone."""
     from datetime import datetime, timedelta
     diff = app_timezone - local_timezone_offset()
     return datetime.now() + timedelta(hours=diff)
 
 
 def tz_label(offset: float) -> str:
-    """Human-readable timezone label for Indonesian and common offsets."""
-    mapping = {
-        7.0: "WIB (UTC+7)",
-        8.0: "WITA (UTC+8)",
-        9.0: "WIT (UTC+9)",
-        5.5: "IST (UTC+5:30)",
-        3.0: "UTC+3",
-        0.0: "UTC",
-    }
-    if offset in mapping:
-        return mapping[offset]
+    """Human-readable timezone label."""
     sign = "+" if offset >= 0 else ""
     h = int(abs(offset))
     m = int(round((abs(offset) - h) * 60))
@@ -132,10 +148,10 @@ def timezone_from_coords(lat: float, lon: float) -> tuple[float, str]:
 
 
 def search_city(query: str, timeout: int = 8) -> list[dict]:
-    """Search for a city/district using Nominatim OpenStreetMap.
+    """Search for a city/place worldwide using Nominatim OpenStreetMap.
 
-    Returns a list of dicts with keys: display_name, lat, lon, timezone, city, country.
-    Supports Indonesian place names including kecamatan/kabupaten.
+    Returns a list of dicts with keys:
+        display_name, full_name, lat, lon, city, country, country_code, timezone, timezone_name.
     """
     try:
         import requests
@@ -144,10 +160,10 @@ def search_city(query: str, timeout: int = 8) -> list[dict]:
             params={
                 "q": query,
                 "format": "json",
-                "limit": 8,
+                "limit": 10,
                 "addressdetails": 1,
             },
-            headers={"User-Agent": "MuslimDesk/1.0 (prayer time app)"},
+            headers={"User-Agent": "MuslimDesk/1.0 (prayer time app; worldwide)"},
             timeout=timeout,
         )
         results = r.json()
@@ -157,7 +173,7 @@ def search_city(query: str, timeout: int = 8) -> list[dict]:
             lon = float(item["lon"])
             addr = item.get("address", {})
 
-            # Build a readable city name from the address components
+            # Build a readable place name from address components
             city = (
                 addr.get("village")
                 or addr.get("suburb")
@@ -169,29 +185,30 @@ def search_city(query: str, timeout: int = 8) -> list[dict]:
                 or addr.get("state")
                 or item.get("display_name", "").split(",")[0]
             )
-            # Include district/regency if different
             district = (
                 addr.get("county")
                 or addr.get("state_district")
                 or addr.get("municipality")
                 or ""
             )
-            country  = addr.get("country", "")
-            state    = addr.get("state", "")
+            country      = addr.get("country", "")
+            country_code = addr.get("country_code", "").upper()
+            state        = addr.get("state", "")
 
-            # Build short display: Village, Kabupaten, Provinsi, Negara
-            parts = [p for p in [city, district, state, country] if p and p != city]
-            display = city + (", " + ", ".join(parts[:3]) if parts else "")
+            # Short display: Place, District/State, Country (max 3 parts after city)
+            parts = [p for p in [district, state, country] if p and p != city]
+            display = city + (", " + ", ".join(parts[:2]) if parts else "")
 
             tz_offset, tz_name = timezone_from_coords(lat, lon)
             out.append({
-                "display_name": display,
-                "full_name":    item.get("display_name", display),
-                "lat":          lat,
-                "lon":          lon,
-                "city":         city,
-                "country":      country,
-                "timezone":     tz_offset,
+                "display_name":  display,
+                "full_name":     item.get("display_name", display),
+                "lat":           lat,
+                "lon":           lon,
+                "city":          city,
+                "country":       country,
+                "country_code":  country_code,
+                "timezone":      tz_offset,
                 "timezone_name": tz_name,
             })
         return out

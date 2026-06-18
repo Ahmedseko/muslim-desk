@@ -54,7 +54,7 @@ class Settings:
     theme: str = "dark"           # dark | light | system
 
     # Prayer calculation
-    method: str   = "Kemenag"
+    method: str   = "MWL"
     asr_method: int = 1           # 1=Standard (Syafi'i), 2=Hanafi
 
     # Location
@@ -87,10 +87,10 @@ class Settings:
     prayer_sounds: Dict[str, str] = field(default_factory=lambda: {
         "Fajr":    "",
         "Sunrise": "",
-        "Dhuhr":   r"C:\Users\ahmedseko\Music\ADZAN UMAR AL FARUQ.wav",
-        "Asr":     r"C:\Users\ahmedseko\Music\ADZAN UMAR AL FARUQ.wav",
-        "Maghrib": r"C:\Users\ahmedseko\Music\ADZAN UMAR AL FARUQ.wav",
-        "Isha":    r"C:\Users\ahmedseko\Music\ADZAN UMAR AL FARUQ.wav",
+        "Dhuhr":   "",
+        "Asr":     "",
+        "Maghrib": "",
+        "Isha":    "",
     })
 
     # Time display format

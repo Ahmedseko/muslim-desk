@@ -7,7 +7,8 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
 
 from ..widgets import QiblaCompass, SectionCard
 from .. import theme as th
-from ...core.qibla_calculator import qibla_bearing, distance_to_mecca_km, compass_direction
+from ...core.qibla_calculator import qibla_bearing, distance_to_mecca_km
+from ...i18n import t, compass_dir as _compass_dir
 
 
 class QiblaPage(QWidget):
@@ -23,15 +24,15 @@ class QiblaPage(QWidget):
         root.setSpacing(16)
 
         # Header
-        lbl = QLabel("Arah Kiblat")
+        lbl = QLabel(t("qibla_title"))
         lbl.setObjectName("H1")
         root.addWidget(lbl)
 
-        sub = QLabel("Arah menuju Ka'bah, Masjidil Haram, Makkah Al-Mukarramah")
+        sub = QLabel(t("qibla_subtitle"))
         sub.setObjectName("Muted")
         root.addWidget(sub)
 
-        # ── Info bar: keterbatasan sensor
+        # ── Info bar: sensor limitation warning
         info_bar = QFrame()
         info_bar.setObjectName("Card")
         info_bar.setStyleSheet(
@@ -46,12 +47,7 @@ class QiblaPage(QWidget):
         icon_lbl.setStyleSheet("font-size: 18px; background: transparent;")
         info_layout.addWidget(icon_lbl)
 
-        info_text = QLabel(
-            "<b>Kompas ini bersifat statis — tidak real-time.</b><br>"
-            "Laptop umumnya <b>tidak memiliki sensor magnetometer</b> seperti ponsel, "
-            "sehingga jarum tidak dapat berputar mengikuti arah fisik laptop. "
-            "Gunakan panduan di bawah untuk menentukan arah kiblat secara akurat."
-        )
+        info_text = QLabel(t("qibla_static_warn"))
         info_text.setStyleSheet(f"color: {th.TEXT}; font-size: 13px; background: transparent;")
         info_text.setWordWrap(True)
         info_text.setTextFormat(Qt.TextFormat.RichText)
@@ -70,7 +66,7 @@ class QiblaPage(QWidget):
         compass_layout.setSpacing(10)
         compass_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        lbl_compass = QLabel("Kompas Kiblat")
+        lbl_compass = QLabel(t("qibla_compass_lbl"))
         lbl_compass.setStyleSheet(
             f"font-size: 14px; font-weight: 600; color: {th.HEADING}; background: transparent;"
         )
@@ -80,8 +76,8 @@ class QiblaPage(QWidget):
         self._compass = QiblaCompass()
         compass_layout.addWidget(self._compass, 1)
 
-        # Bearing + legend row
-        self._bearing_lbl = QLabel("0.0° dari Utara")
+        # Bearing label
+        self._bearing_lbl = QLabel(f"0.0° {t('qibla_from_north')}")
         self._bearing_lbl.setStyleSheet(
             f"font-size: 18px; font-weight: 700; color: {th.ACCENT}; background: transparent;"
         )
@@ -92,8 +88,8 @@ class QiblaPage(QWidget):
         legend = QHBoxLayout()
         legend.setSpacing(16)
         legend.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        for color, text in (("#ef4444", "● Utara (N)"), (th.ACCENT_DK, "● Arah Kiblat")):
-            lbl_leg = QLabel(text)
+        for color, key in (("#ef4444", "compass_north_lbl"), (th.ACCENT_DK, "compass_qibla_lbl")):
+            lbl_leg = QLabel(t(key))
             lbl_leg.setStyleSheet(f"color: {color}; font-size: 12px; background: transparent;")
             legend.addWidget(lbl_leg)
         compass_layout.addLayout(legend)
@@ -105,38 +101,29 @@ class QiblaPage(QWidget):
         info_col.setSpacing(12)
 
         # Location card
-        self._loc_card = SectionCard("📍  Lokasi Anda")
-        self._loc_lat  = self._add_info_row(self._loc_card, "Lintang", "—")
-        self._loc_lon  = self._add_info_row(self._loc_card, "Bujur", "—")
-        self._loc_city = self._add_info_row(self._loc_card, "Kota", "—")
+        self._loc_card = SectionCard(t("your_location_card"))
+        self._loc_lat  = self._add_info_row(self._loc_card, t("lbl_latitude_short"), "—")
+        self._loc_lon  = self._add_info_row(self._loc_card, t("lbl_longitude_short"), "—")
+        self._loc_city = self._add_info_row(self._loc_card, t("lbl_city_short"), "—")
         info_col.addWidget(self._loc_card)
 
         # Qibla card
-        self._qibla_card = SectionCard("🕋  Arah Kiblat")
-        self._q_bearing  = self._add_info_row(self._qibla_card, "Sudut dari Utara", "—")
-        self._q_dir      = self._add_info_row(self._qibla_card, "Arah Kompas", "—")
-        self._q_dist     = self._add_info_row(self._qibla_card, "Jarak ke Makkah", "—")
+        self._qibla_card = SectionCard(t("qibla_card_title"))
+        self._q_bearing  = self._add_info_row(self._qibla_card, t("qibla_angle_lbl"), "—")
+        self._q_dir      = self._add_info_row(self._qibla_card, t("compass_dir_lbl"), "—")
+        self._q_dist     = self._add_info_row(self._qibla_card, t("dist_to_mecca"), "—")
         info_col.addWidget(self._qibla_card)
 
-        # Kaaba info
-        kaaba_card = SectionCard("🕌  Ka'bah (Patokan)")
-        self._add_info_row(kaaba_card, "Lintang", "21.4225° U")
-        self._add_info_row(kaaba_card, "Bujur", "39.8262° T")
-        self._add_info_row(kaaba_card, "Lokasi", "Makkah Al-Mukarramah, Arab Saudi")
+        # Kaaba reference card
+        kaaba_card = SectionCard(t("kaaba_ref_card"))
+        self._add_info_row(kaaba_card, t("lbl_latitude_short"), "21.4225°")
+        self._add_info_row(kaaba_card, t("lbl_longitude_short"), "39.8262°")
+        self._add_info_row(kaaba_card, t("lbl_city_short"), t("kaaba_location_val"))
         info_col.addWidget(kaaba_card)
 
-        # Cara pakai — diperjelas karena laptop tidak ada sensor
-        cara_card = SectionCard("📖  Cara Menggunakan di Laptop")
-        cara_text = QLabel(
-            "<b>Langkah 1</b> — Cari arah Utara terlebih dahulu.<br>"
-            "Gunakan kompas HP, Google Maps, atau matahari (pagi = Timur).<br><br>"
-            "<b>Langkah 2</b> — Putar badan/laptop sehingga menghadap Utara.<br><br>"
-            "<b>Langkah 3</b> — Dari posisi menghadap Utara, putar badan<br>"
-            "sesuai sudut kiblat yang tertera (misal: <b>292°</b> = hampir ke Barat, sedikit ke Utara).<br><br>"
-            "<b>Langkah 4</b> — Arah wajah Anda sekarang = arah Kiblat. ✅<br><br>"
-            "<span style='color: #8b949e; font-size: 12px;'>"
-            "💡 Untuk akurasi real-time, gunakan kompas HP bersama bearing dari aplikasi ini.</span>"
-        )
+        # How-to-use card
+        cara_card = SectionCard(t("how_to_use_card"))
+        cara_text = QLabel(t("qibla_steps"))
         cara_text.setStyleSheet(f"color: {th.TEXT}; font-size: 13px; background: transparent;")
         cara_text.setWordWrap(True)
         cara_text.setTextFormat(Qt.TextFormat.RichText)
@@ -164,17 +151,16 @@ class QiblaPage(QWidget):
         lat = s.latitude
         lon = s.longitude
 
-        bearing  = qibla_bearing(lat, lon)
-        dist     = distance_to_mecca_km(lat, lon)
-        direction = compass_direction(bearing)
+        bearing = qibla_bearing(lat, lon)
+        dist    = distance_to_mecca_km(lat, lon)
 
         self._compass.set_bearing(bearing)
-        self._bearing_lbl.setText(f"{bearing:.1f}° dari Utara")
+        self._bearing_lbl.setText(f"{bearing:.1f}° {t('qibla_from_north')}")
 
         self._loc_lat.setText(f"{lat:.6f}°")
         self._loc_lon.setText(f"{lon:.6f}°")
         self._loc_city.setText(f"{s.city}, {s.country}")
 
         self._q_bearing.setText(f"{bearing:.2f}°")
-        self._q_dir.setText(direction)
+        self._q_dir.setText(_compass_dir(bearing))
         self._q_dist.setText(f"{dist:,.1f} km")

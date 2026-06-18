@@ -15,6 +15,7 @@ from PyQt6.QtWidgets import (QWidget, QFrame, QLabel, QVBoxLayout, QHBoxLayout,
                               QAbstractItemView)
 
 from . import theme as th
+from ..i18n import t
 
 
 # ───────────────────────── helpers ──────────────────────────────────────────
@@ -168,7 +169,7 @@ class PrayerCard(QFrame):
         root.addStretch()
 
         # Alarm button
-        self._alarm_btn = QPushButton("🔔 Aktif")
+        self._alarm_btn = QPushButton(t("alarm_active"))
         self._alarm_btn.setObjectName("AlarmOn")
         self._alarm_btn.setFixedHeight(32)
         self._alarm_btn.clicked.connect(self._toggle_alarm)
@@ -191,10 +192,10 @@ class PrayerCard(QFrame):
     def set_alarm(self, enabled: bool):
         self._alarm_on = enabled
         if enabled:
-            self._alarm_btn.setText("🔔 Aktif")
+            self._alarm_btn.setText(t("alarm_active"))
             self._alarm_btn.setObjectName("AlarmOn")
         else:
-            self._alarm_btn.setText("🔕 Nonaktif")
+            self._alarm_btn.setText(t("alarm_inactive"))
             self._alarm_btn.setObjectName("AlarmOff")
         self._alarm_btn.style().unpolish(self._alarm_btn)
         self._alarm_btn.style().polish(self._alarm_btn)
@@ -239,17 +240,17 @@ class NextPrayerBanner(QFrame):
             s.setStyleSheet(f"background: {th.BORDER};")
             return s
 
-        col1, self._prayer_name = _col("SHOLAT BERIKUTNYA", "—")
+        col1, self._prayer_name = _col(t("next_prayer"), "—")
         self._prayer_name.setStyleSheet(
             f"font-size: 26px; font-weight: 800; color: {th.ACCENT};"
         )
 
-        col2, self._time_lbl = _col("WAKTU SHOLAT", "--:--")
+        col2, self._time_lbl = _col(t("prayer_time_lbl"), "--:--")
         self._time_lbl.setStyleSheet(
             f"font-size: 26px; font-weight: 700; color: {th.HEADING};"
         )
 
-        col3, self._countdown_lbl = _col("HITUNG MUNDUR", "--:--:--")
+        col3, self._countdown_lbl = _col(t("countdown_lbl"), "--:--:--")
         self._countdown_lbl.setStyleSheet(
             f"font-size: 26px; font-weight: 800; color: {th.ACCENT};"
         )
@@ -467,8 +468,8 @@ class CitySearchDialog(QDialog):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Cari Kota / Kecamatan")
-        self.setMinimumSize(520, 440)
+        self.setWindowTitle(t("city_search_win_title"))
+        self.setMinimumSize(560, 460)
         self.setModal(True)
         self._results: list[dict] = []
         self._results_ready.connect(self._on_results)
@@ -483,28 +484,24 @@ class CitySearchDialog(QDialog):
         root.setContentsMargins(20, 18, 20, 18)
         root.setSpacing(12)
 
-        title = QLabel("🔍  Cari Kota / Kecamatan")
+        title = QLabel(t("city_search_title"))
         title.setStyleSheet(f"font-size: 16px; font-weight: 700; color: {th.HEADING}; background: transparent;")
         root.addWidget(title)
 
-        hint = QLabel(
-            "Ketik nama kota, kecamatan, atau kabupaten lalu tekan Enter atau klik Cari.\n"
-            "Tips: gunakan 2–4 kata kunci saja, misal: <b>Simpang Lima Banjar</b>"
-        )
+        hint = QLabel(t("city_search_hint"))
         hint.setStyleSheet(f"font-size: 12px; color: {th.MUTED}; background: transparent;")
         hint.setWordWrap(True)
-        hint.setTextFormat(Qt.TextFormat.RichText)
         root.addWidget(hint)
 
         # Search row
         row = QHBoxLayout()
         row.setSpacing(8)
         self._search_edit = QLineEdit()
-        self._search_edit.setPlaceholderText("Contoh: Simpang Lima Banjar   atau   Martapura Banjar")
+        self._search_edit.setPlaceholderText(t("city_search_placeholder"))
         self._search_edit.returnPressed.connect(self._do_search)
-        self._btn_search = QPushButton("Cari")
+        self._btn_search = QPushButton(t("city_search_btn"))
         self._btn_search.setObjectName("Primary")
-        self._btn_search.setFixedWidth(72)
+        self._btn_search.setFixedWidth(80)
         self._btn_search.clicked.connect(self._do_search)
         row.addWidget(self._search_edit, 1)
         row.addWidget(self._btn_search)
@@ -559,9 +556,9 @@ class CitySearchDialog(QDialog):
         btn_row = QHBoxLayout()
         btn_row.setSpacing(8)
         btn_row.addStretch()
-        btn_cancel = QPushButton("Batal")
+        btn_cancel = QPushButton(t("btn_cancel"))
         btn_cancel.clicked.connect(self.reject)
-        self._btn_pilih = QPushButton("Pilih Lokasi")
+        self._btn_pilih = QPushButton(t("city_search_select"))
         self._btn_pilih.setObjectName("Primary")
         self._btn_pilih.setEnabled(False)
         self._btn_pilih.clicked.connect(self._confirm)
@@ -573,7 +570,7 @@ class CitySearchDialog(QDialog):
         query = self._search_edit.text().strip()
         if not query:
             return
-        self._status_lbl.setText("⌛ Mencari...")
+        self._status_lbl.setText(t("city_search_searching"))
         self._btn_search.setEnabled(False)
         self._list.clear()
         self._results = []
@@ -594,12 +591,9 @@ class CitySearchDialog(QDialog):
         self._results = results
         self._btn_search.setEnabled(True)
         if not results:
-            self._status_lbl.setText(
-                "❌ Tidak ditemukan. Coba lebih singkat, misal: "
-                "\"Simpang Lima Banjar\" atau \"Cintapuri Banjar\""
-            )
+            self._status_lbl.setText(t("city_search_not_found"))
             return
-        self._status_lbl.setText(f"✅ {len(results)} hasil — klik untuk memilih, dobel klik untuk langsung konfirmasi:")
+        self._status_lbl.setText(t("city_search_found", len(results)))
         for item in results:
             li = QListWidgetItem(item["display_name"])
             li.setToolTip(item["full_name"])
@@ -620,10 +614,13 @@ class CitySearchDialog(QDialog):
         idx = self._list.row(current)
         if 0 <= idx < len(self._results):
             r = self._results[idx]
-            tz_str = f"UTC+{r['timezone']:.0f}" if r["timezone"] >= 0 else f"UTC{r['timezone']:.0f}"
+            from src.core.location_service import tz_label
+            tz_str = tz_label(r["timezone"])
             self._detail_lbl.setText(
                 f"📍 {r['full_name']}\n"
-                f"Lintang: {r['lat']:.6f}°  ·  Bujur: {r['lon']:.6f}°  ·  Zona Waktu: {tz_str}"
+                f"{t('lbl_latitude_short')}: {r['lat']:.6f}°  ·  "
+                f"{t('lbl_longitude_short')}: {r['lon']:.6f}°  ·  "
+                f"{t('lbl_timezone_short')}: {tz_str}"
             )
             self._btn_pilih.setEnabled(True)
 
@@ -637,8 +634,9 @@ class CitySearchDialog(QDialog):
                 longitude=r["lon"],
                 city=r["city"],
                 country=r["country"],
+                country_code=r.get("country_code", ""),
                 timezone=r["timezone"],
-                timezone_name="",
+                timezone_name=r.get("timezone_name", ""),
             )
             self.location_selected.emit(loc)
             self.accept()

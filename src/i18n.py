@@ -145,7 +145,8 @@ _STRINGS: dict[str, dict[str, str]] = {
     "reminder_10":        {"id": "10 menit sebelum",               "en": "10 minutes before"},
     "reminder_15":        {"id": "15 menit sebelum",               "en": "15 minutes before"},
     "alarm_section_lbl":  {"id": "Alarm & Suara per Waktu Sholat", "en": "Alarm & Sound per Prayer"},
-    "hint_sound":         {"id": "Centang = aktifkan alarm sholat. Kosong = gunakan suara global di atas.", "en": "Check = enable alarm. Empty = use global sound above."},
+    "hint_sound":              {"id": "Centang = aktifkan alarm sholat. Kosong = gunakan suara global di atas.", "en": "Check = enable alarm. Empty = use global sound above."},
+    "sound_prayer_placeholder":{"id": "(gunakan suara global / default)", "en": "(use global/default sound)"},
 
     "sec_window":         {"id": "🖥️  Jendela Aplikasi",          "en": "🖥️  Window"},
     "startup_cb":         {"id": "Jalankan otomatis saat Windows startup", "en": "Run automatically at Windows startup"},
@@ -161,11 +162,92 @@ _STRINGS: dict[str, dict[str, str]] = {
     "about_fw":           {"id": "Framework",                      "en": "Framework"},
     "hint_theme_save":    {"id": "Perubahan tema diterapkan setelah disimpan.", "en": "Theme changes apply after saving."},
 
+    # ── City search dialog ────────────────────────────────────────────────────
+    "city_search_win_title":  {"id": "Cari Kota / Lokasi",         "en": "Search City / Location"},
+    "city_search_title":      {"id": "🔍  Cari Kota / Lokasi",     "en": "🔍  Search City / Location"},
+    "city_search_hint":       {"id": ("Ketik nama kota, kecamatan, atau tempat lalu tekan Enter.\n"
+                                       "Mendukung pencarian seluruh dunia. Tips: gunakan 2–4 kata kunci."),
+                               "en": ("Type a city, district, or place name and press Enter.\n"
+                                       "Worldwide search supported. Tip: use 2–4 keywords.")},
+    "city_search_placeholder":{"id": "Contoh: Banjarmasin  atau  London  atau  New York",
+                               "en": "Example: Jakarta  or  London, UK  or  New York"},
+    "city_search_btn":        {"id": "Cari",                        "en": "Search"},
+    "city_search_searching":  {"id": "⌛ Mencari...",               "en": "⌛ Searching..."},
+    "city_search_not_found":  {"id": "❌ Tidak ditemukan. Coba kata kunci yang berbeda.",
+                               "en": "❌ Not found. Try different keywords."},
+    "city_search_found":      {"id": "✅ {} hasil — klik untuk memilih, dobel klik untuk konfirmasi:",
+                               "en": "✅ {} results — click to select, double-click to confirm:"},
+    "btn_cancel":             {"id": "Batal",                       "en": "Cancel"},
+    "city_search_select":     {"id": "Pilih Lokasi",                "en": "Select Location"},
+    "lbl_timezone_short":     {"id": "Zona Waktu",                  "en": "Timezone"},
+    "method_auto_set":        {"id": "✅ Metode hisab diset otomatis: {}",
+                               "en": "✅ Calculation method auto-set: {}"},
+
     # ── Qibla page ────────────────────────────────────────────────────────────
     "qibla_title":        {"id": "Arah Kiblat",                    "en": "Qibla Direction"},
-    "qibla_bearing":      {"id": "Arah Kiblat",                    "en": "Qibla Bearing"},
-    "qibla_distance":     {"id": "Jarak ke Ka'bah",                "en": "Distance to Ka'bah"},
-    "qibla_from":         {"id": "dari",                           "en": "from"},
+    "qibla_subtitle":     {"id": "Arah menuju Ka'bah, Masjidil Haram, Makkah Al-Mukarramah",
+                           "en": "Direction to Ka'bah, Masjidil Haram, Makkah Al-Mukarramah"},
+    "qibla_compass_lbl":  {"id": "Kompas Kiblat",                  "en": "Qibla Compass"},
+    "qibla_from_north":   {"id": "dari Utara",                     "en": "from North"},
+    "compass_north_lbl":  {"id": "● Utara (N)",                    "en": "● North (N)"},
+    "compass_qibla_lbl":  {"id": "● Arah Kiblat",                  "en": "● Qibla Direction"},
+    "your_location_card": {"id": "📍  Lokasi Anda",                 "en": "📍  Your Location"},
+    "lbl_latitude_short": {"id": "Lintang",                        "en": "Latitude"},
+    "lbl_longitude_short":{"id": "Bujur",                          "en": "Longitude"},
+    "lbl_city_short":     {"id": "Kota",                           "en": "City"},
+    "qibla_card_title":   {"id": "🕋  Arah Kiblat",                "en": "🕋  Qibla Direction"},
+    "qibla_angle_lbl":    {"id": "Sudut dari Utara",               "en": "Angle from North"},
+    "compass_dir_lbl":    {"id": "Arah Kompas",                    "en": "Compass Direction"},
+    "dist_to_mecca":      {"id": "Jarak ke Makkah",                "en": "Distance to Mecca"},
+    "kaaba_ref_card":     {"id": "🕌  Ka'bah (Patokan)",           "en": "🕌  Ka'bah (Reference)"},
+    "kaaba_location_val": {"id": "Makkah Al-Mukarramah, Arab Saudi","en": "Makkah Al-Mukarramah, Saudi Arabia"},
+    "how_to_use_card":    {"id": "📖  Cara Menggunakan di Laptop",  "en": "📖  How to Use on Laptop"},
+    "qibla_static_warn":  {
+        "id": ("<b>Kompas ini bersifat statis — tidak real-time.</b><br>"
+               "Laptop umumnya <b>tidak memiliki sensor magnetometer</b> seperti ponsel, "
+               "sehingga jarum tidak dapat berputar mengikuti arah fisik laptop. "
+               "Gunakan panduan di bawah untuk menentukan arah kiblat secara akurat."),
+        "en": ("<b>This compass is static — not real-time.</b><br>"
+               "Laptops generally <b>have no magnetometer sensor</b> like smartphones, "
+               "so the needle cannot rotate with the physical orientation of the laptop. "
+               "Use the guide below to determine the qibla direction accurately."),
+    },
+    "qibla_steps": {
+        "id": ("<b>Langkah 1</b> — Cari arah Utara terlebih dahulu.<br>"
+               "Gunakan kompas HP, Google Maps, atau matahari (pagi = Timur).<br><br>"
+               "<b>Langkah 2</b> — Putar badan/laptop sehingga menghadap Utara.<br><br>"
+               "<b>Langkah 3</b> — Dari posisi menghadap Utara, putar badan<br>"
+               "sesuai sudut kiblat yang tertera (misal: <b>292°</b> = hampir ke Barat, sedikit ke Utara).<br><br>"
+               "<b>Langkah 4</b> — Arah wajah Anda sekarang = arah Kiblat. ✅<br><br>"
+               "<span style='color: #8b949e; font-size: 12px;'>"
+               "💡 Untuk akurasi real-time, gunakan kompas HP bersama bearing dari aplikasi ini.</span>"),
+        "en": ("<b>Step 1</b> — First, find North.<br>"
+               "Use your phone's compass, Google Maps, or the sun (morning = East).<br><br>"
+               "<b>Step 2</b> — Rotate your body/laptop to face North.<br><br>"
+               "<b>Step 3</b> — From facing North, rotate your body<br>"
+               "by the qibla angle shown (e.g. <b>292°</b> = nearly West, slightly North).<br><br>"
+               "<b>Step 4</b> — The direction you now face = Qibla. ✅<br><br>"
+               "<span style='color: #8b949e; font-size: 12px;'>"
+               "💡 For real-time accuracy, use your phone's compass with this app's bearing.</span>"),
+    },
+
+    # ── Compass 16-point directions ───────────────────────────────────────────
+    "compass_N":   {"id": "U",   "en": "N"},
+    "compass_NNE": {"id": "UTL", "en": "NNE"},
+    "compass_NE":  {"id": "TL",  "en": "NE"},
+    "compass_ENE": {"id": "TTL", "en": "ENE"},
+    "compass_E":   {"id": "T",   "en": "E"},
+    "compass_ESE": {"id": "TTG", "en": "ESE"},
+    "compass_SE":  {"id": "TG",  "en": "SE"},
+    "compass_SSE": {"id": "BTG", "en": "SSE"},
+    "compass_S":   {"id": "S",   "en": "S"},
+    "compass_SSW": {"id": "BSD", "en": "SSW"},
+    "compass_SW":  {"id": "SD",  "en": "SW"},
+    "compass_WSW": {"id": "BLD", "en": "WSW"},
+    "compass_W":   {"id": "B",   "en": "W"},
+    "compass_WNW": {"id": "BBL", "en": "WNW"},
+    "compass_NW":  {"id": "BL",  "en": "NW"},
+    "compass_NNW": {"id": "UBL", "en": "NNW"},
 }
 
 _lang: str = "id"
@@ -200,6 +282,19 @@ def day_name(weekday: int, short: bool = False) -> str:
 def month_name(month: int, short: bool = False) -> str:
     key = f"month_short_{month}" if short else f"month_{month}"
     return t(key)
+
+
+_COMPASS_KEYS = [
+    "compass_N",   "compass_NNE", "compass_NE",  "compass_ENE",
+    "compass_E",   "compass_ESE", "compass_SE",  "compass_SSE",
+    "compass_S",   "compass_SSW", "compass_SW",  "compass_WSW",
+    "compass_W",   "compass_WNW", "compass_NW",  "compass_NNW",
+]
+
+
+def compass_dir(bearing: float) -> str:
+    """Return localised 16-point compass abbreviation."""
+    return t(_COMPASS_KEYS[round(bearing / 22.5) % 16])
 
 
 def prayer_name(prayer_en: str) -> str:

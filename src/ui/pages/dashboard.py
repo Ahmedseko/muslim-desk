@@ -492,6 +492,10 @@ class DashboardPage(QWidget):
         s.country       = loc.country
         s.timezone      = loc.timezone
         s.timezone_name = loc.timezone_name
+        # Auto-set calculation method based on detected country
+        if loc.country_code:
+            from ...core.location_service import method_for_country
+            s.method = method_for_country(loc.country_code)
         from ...data.settings_manager import save as save_s
         save_s(s)
         self._btn_refresh_loc.setText(t("refresh_location_btn"))
