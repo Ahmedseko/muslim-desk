@@ -780,13 +780,13 @@ class QuranPage(QWidget):
         # Stop currently playing if same button
         if self._playing_btn is btn:
             self._player.stop()
-            btn.setText("▶")
+            btn.setText("🔊")
             self._playing_btn = None
             return
 
         # Reset previous button
         if self._playing_btn is not None:
-            self._playing_btn.setText("▶")
+            self._playing_btn.setText("🔊")
 
         global_num = _GLOBAL_OFFSET[surah - 1] + ayah - 1
         edition    = self._current_reciter
@@ -819,7 +819,7 @@ class QuranPage(QWidget):
             return  # user switched away
         self._player.setSource(QUrl.fromLocalFile(path))
         self._player.play()
-        btn.setText("⏹")
+        btn.setText("⏹️")
         self._player.playbackStateChanged.connect(
             lambda state, b=btn: self._on_playback_changed(state, b)
         )
@@ -834,7 +834,7 @@ class QuranPage(QWidget):
         if state == _MP.PlaybackState.StoppedState:
             try:
                 if btn and self._playing_btn is btn:
-                    btn.setText("▶")
+                    btn.setText("🔊")
                     self._playing_btn = None
             except RuntimeError:
                 pass
@@ -890,11 +890,11 @@ class QuranPage(QWidget):
         ar_row.addSpacing(4)
 
         # Audio play button
-        play_btn = QPushButton("▶")
+        play_btn = QPushButton("🔊")
         play_btn.setFixedSize(32, 32)
         play_btn.setStyleSheet(
             f"QPushButton {{ background: transparent; border: 1px solid {th.BORDER};"
-            f" border-radius: 8px; color: {th.ACCENT}; font-size: 13px; }}"
+            f" border-radius: 8px; font-size: 14px; }}"
             f"QPushButton:hover {{ background: {th.ACCENT_DK}22; border-color: {th.ACCENT_DK}; }}"
         )
         play_btn.clicked.connect(
