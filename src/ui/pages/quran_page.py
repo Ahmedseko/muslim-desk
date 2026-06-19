@@ -141,6 +141,7 @@ class QuranPage(QWidget):
         self._playing_ayah: int = 0
         self._playing_surah_audio: int = 0
         self._auto_play_on_load: bool = False
+        self._active_frame = None  # QFrame of currently playing verse
         self._audio_sig = _AudioSignal()
         self._audio_sig.ready.connect(self._on_audio_ready)
         self._audio_sig.error.connect(self._on_audio_error)
@@ -763,6 +764,7 @@ class QuranPage(QWidget):
 
         # Stop any playing audio (clear btn first so handler skips auto-advance)
         self._playing_btn = None
+        self._active_frame = None
         self._player.stop()
 
         # Clear verse search
@@ -873,6 +875,11 @@ class QuranPage(QWidget):
         self._player.play()
         btn.set_playing(True)
         self._scroll_to_ayah(self._playing_ayah)
+        # Highlight active verse frame
+        for num, frame, _ in self._verse_widgets:
+            if num == self._playing_ayah:
+                self._set_active_frame(frame)
+                break
         # Update Windows lock screen media info
         surah_name = _SURAHS[self._playing_surah_audio - 1][1]
         reciter = next((n for n, e in _RECITERS if e == self._current_reciter), self._current_reciter)
@@ -890,12 +897,14 @@ class QuranPage(QWidget):
             return
         btn = self._playing_btn
         if btn is None:
+            self._clear_active_frame()
             return   # stopped programmatically — no auto-advance
         try:
             btn.set_playing(False)
         except RuntimeError:
             pass
         self._playing_btn = None
+        self._clear_active_frame()
         self._auto_advance()
 
     def _scroll_to_ayah(self, ayah: int):
@@ -963,9 +972,38 @@ class QuranPage(QWidget):
                         self._play_verse(surah, prev_ayah, play_btn)
                     break
 
+    # ─── active verse highlight ───────────────────────────────────────────────
+
+    def _set_active_frame(self, frame):
+        self._clear_active_frame()
+        self._active_frame = frame
+        h = th.ACCENT.lstrip('#')
+        r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+        frame.setStyleSheet(
+            f"QFrame {{ background: rgba({r},{g},{b},0.09); "
+            f"border-radius: 8px; margin: 1px 0; "
+            f"border-left: 3px solid {th.ACCENT}; }}"
+        )
+
+    def _clear_active_frame(self):
+        frame = self._active_frame
+        if frame is None:
+            return
+        self._active_frame = None
+        try:
+            num = frame.property("verse_num")
+            if num is not None:
+                frame.setStyleSheet(
+                    f"QFrame {{ background: {'transparent' if num % 2 == 0 else th.SURFACE}; "
+                    f"border-radius: 8px; margin: 1px 0; }}"
+                )
+        except RuntimeError:
+            pass
+
     def _make_verse_widget(self, num: int, arabic: str, translation: str,
                            tajweed_text: str, lang: str, surah: int) -> QFrame:
         frame = QFrame()
+        frame.setProperty("verse_num", num)
         frame.setStyleSheet(
             f"QFrame {{ background: {'transparent' if num % 2 == 0 else th.SURFACE}; "
             f"border-radius: 8px; margin: 1px 0; }}"

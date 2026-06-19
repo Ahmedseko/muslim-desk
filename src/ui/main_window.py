@@ -18,6 +18,8 @@ from .pages.settings_page import SettingsPage
 from .pages.dzikir_page import DzikirPage
 from .pages.doa_page import DoaPage
 from .pages.quran_page import QuranPage
+from .pages.hadith_page import HadithPage
+from .pages.fiqih_page import FiqihPage
 from ..data.settings_manager import Settings, save as save_settings
 from ..core.notification_manager import NotificationManager, PrayerAlertDialog
 from ..core import prayer_calculator as pc
@@ -31,6 +33,8 @@ _MENU_DEF = [
     ("📿", "nav_dzikir",     "Dzikir"),
     ("🤲", "nav_doa",        "Doa"),
     ("📖", "nav_quran",      "Quran"),
+    ("📜", "nav_hadith",     "Hadith"),
+    ("⚖️", "nav_fiqih",      "Fiqih"),
     ("⚙️", "nav_settings",   "Settings"),
 ]
 
@@ -206,6 +210,8 @@ class MainWindow(QMainWindow):
         self._dzikir_page    = DzikirPage(self)
         self._doa_page       = DoaPage(self)
         self._quran_page     = QuranPage(self)
+        self._hadith_page    = HadithPage(self)
+        self._fiqih_page     = FiqihPage(self)
 
         for key, page in (
             ("Dashboard", self._dash),
@@ -213,6 +219,8 @@ class MainWindow(QMainWindow):
             ("Dzikir",    self._dzikir_page),
             ("Doa",       self._doa_page),
             ("Quran",     self._quran_page),
+            ("Hadith",    self._hadith_page),
+            ("Fiqih",     self._fiqih_page),
             ("Settings",  self._settings_page),
         ):
             self._pages[key] = page

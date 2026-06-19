@@ -365,6 +365,38 @@ _STRINGS: dict[str, dict[str, str]] = {
     "quran_audio_loading":   {"id": "⌛",                      "en": "⌛"},
     "quran_audio_error":     {"id": "⚠",                      "en": "⚠"},
 
+    # ── Hadith page ───────────────────────────────────────────────────────────
+    "nav_hadith":            {"id": "Hadist",                       "en": "Hadith"},
+    "hadith_title":          {"id": "Hadist Shahih",                "en": "Authentic Hadith"},
+    "hadith_collection":     {"id": "Koleksi",                      "en": "Collection"},
+    "hadith_loading":        {"id": "⌛ Memuat hadist...",           "en": "⌛ Loading hadith..."},
+    "hadith_offline":        {"id": "❌ Gagal memuat. Periksa koneksi internet.", "en": "❌ Failed to load. Check internet connection."},
+    "hadith_prev":           {"id": "◀ Sebelumnya",                 "en": "◀ Previous"},
+    "hadith_next":           {"id": "Berikutnya ▶",                 "en": "Next ▶"},
+    "hadith_search_ph":      {"id": "Cari atau langsung ke no...",  "en": "Search or jump to no..."},
+    "hadith_retry":          {"id": "🔄 Coba Lagi",                 "en": "🔄 Retry"},
+    "hadith_of":             {"id": "dari",                         "en": "of"},
+    "hadith_cached":         {"id": "📱 Cache lokal",               "en": "📱 Local cache"},
+    "hadith_no":             {"id": "No.",                          "en": "No."},
+    "hadith_source":         {"id": "HR.",                          "en": "Narrated in"},
+    "hadith_translation":    {"id": "Terjemahan:",                  "en": "Translation:"},
+    "hadith_goto":           {"id": "Langsung ke no.:",             "en": "Jump to no.:"},
+
+    # ── Fiqih page ────────────────────────────────────────────────────────────
+    "nav_fiqih":             {"id": "Fiqih",                        "en": "Fiqh"},
+    "fiqih_title":           {"id": "Fiqih Islam",                  "en": "Islamic Fiqh"},
+    "fiqih_search_ph":       {"id": "Cari hukum fiqih...",          "en": "Search fiqh rulings..."},
+    "fiqih_evidence":        {"id": "Dalil:",                       "en": "Evidence:"},
+    "fiqih_source":          {"id": "Referensi:",                   "en": "Reference:"},
+    "fiqih_no_results":      {"id": "Tidak ditemukan.",             "en": "No results found."},
+    "fiqih_cat_ibadah":      {"id": "Fiqih Ibadah",                "en": "Fiqh of Worship"},
+    "fiqih_cat_muamalah":    {"id": "Fiqih Muamalah",              "en": "Fiqh of Transactions"},
+    "fiqih_cat_munakahat":   {"id": "Fiqih Munakahat",             "en": "Fiqh of Marriage"},
+    "fiqih_cat_jinayah":     {"id": "Fiqih Jinayah",               "en": "Fiqh of Criminal Law"},
+    "fiqih_cat_mawaris":     {"id": "Fiqih Mawaris",               "en": "Fiqh of Inheritance"},
+    "fiqih_cat_siyasah":     {"id": "Fiqih Siyasah",               "en": "Fiqh of Governance"},
+    "fiqih_cat_adab":        {"id": "Fiqih Adab & Akhlak",         "en": "Fiqh of Manners"},
+
     # ── Compass 16-point directions ───────────────────────────────────────────
     "compass_N":   {"id": "U",   "en": "N"},
     "compass_NNE": {"id": "UTL", "en": "NNE"},
