@@ -160,7 +160,7 @@ class SettingsPage(QWidget):
         container = QWidget()
         scroll.setWidget(container)
         root = QVBoxLayout(container)
-        root.setContentsMargins(28, 20, 28, 28)
+        root.setContentsMargins(28, 16, 28, 8)
         root.setSpacing(16)
 
         # Header
@@ -442,7 +442,7 @@ class SettingsPage(QWidget):
         lbl_dev_key = QLabel(t("about_dev"))
         lbl_dev_key.setStyleSheet(
             f"color: {th.MUTED}; font-size: 12px; font-weight: 600; "
-            f"min-width: 120px; background: transparent;"
+            f"min-width: 160px; background: transparent;"
         )
         lbl_dev_val = QLabel("Ahmed Seko")
         lbl_dev_val.setStyleSheet(
@@ -491,6 +491,7 @@ class SettingsPage(QWidget):
         self._status = QLabel("")
         self._status.setStyleSheet(f"font-size: 12px; color: {th.GOOD}; background: transparent;")
         self._status.setAlignment(Qt.AlignmentFlag.AlignRight)
+        self._status.setVisible(False)
         root.addWidget(self._status)
 
     def show_update_available(self, version: str, url: str):
@@ -558,6 +559,7 @@ class SettingsPage(QWidget):
                 self._method_combo.setCurrentIndex(_method_keys.index(new_method))
             method_msg = f"  ·  {t('method_auto_set', new_method)}"
         self._status.setText(f"{t('loc_set_to')}{loc.city}, {loc.country}{method_msg}")
+        self._status.setVisible(True)
 
     # ─── profiles ────────────────────────────────────────────────────────────
 
@@ -777,6 +779,7 @@ class SettingsPage(QWidget):
         self._tray_cb.setChecked(s.minimize_to_tray)
 
         self._status.setText("")
+        self._status.setVisible(False)
 
         # Restore update badge if update was already found
         if getattr(self._win, "_latest_version", ""):
@@ -849,3 +852,4 @@ class SettingsPage(QWidget):
                 self._win._dash.refresh()
 
         self._status.setText(t("saved_ok"))
+        self._status.setVisible(True)
