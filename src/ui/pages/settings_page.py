@@ -454,20 +454,31 @@ class SettingsPage(QWidget):
         about_card.body.addLayout(dev_row)
 
         _info = [
-            (t("about_algo"),  "PrayTimes.org"),
-            (t("about_hijri"), "Umm al-Qura / Tabular"),
-            (t("about_geo"),   "ip-api.com"),
-            (t("about_fw"),    "PyQt6 (Python)"),
+            (t("about_algo"),        "PrayTimes.org",         ""),
+            (t("about_hijri"),       "Umm al-Qura / Tabular", ""),
+            (t("about_geo"),         "ip-api.com",            ""),
+            (t("about_fw"),          "PyQt6 (Python)",        ""),
+            (t("about_quran_data"),  "alquran.cloud API",     ""),
+            (t("about_audio_fajr"),  "Syekh Mishary Rashid Al-Afasy (Adzan Subuh)",
+             "https://www.youtube.com/watch?v=qhp3gy2rDUU"),
+            (t("about_audio_other"), "Syekh Umar Al-Faruq (Adzan Dzuhur–Isya)",
+             "https://www.youtube.com/watch?v=18r6pTlgFKs"),
+            (t("about_audio_edit"),  "Audacity",              ""),
         ]
-        for key, val in _info:
+        _key_style = (
+            f"color: {th.MUTED}; font-size: 12px; font-weight: 600; "
+            f"min-width: 160px; background: transparent;"
+        )
+        for key, val, url in _info:
             row = QHBoxLayout()
             row.setSpacing(12)
             k = QLabel(key)
-            k.setStyleSheet(
-                f"color: {th.MUTED}; font-size: 12px; font-weight: 600; "
-                f"min-width: 120px; background: transparent;"
-            )
-            v = QLabel(val)
+            k.setStyleSheet(_key_style)
+            if url:
+                v = QLabel(f'<a href="{url}" style="color:{th.ACCENT};">{val}</a>')
+                v.setOpenExternalLinks(True)
+            else:
+                v = QLabel(val)
             v.setStyleSheet(f"color: {th.TEXT}; font-size: 13px; background: transparent;")
             row.addWidget(k)
             row.addWidget(v)

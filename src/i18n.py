@@ -161,6 +161,10 @@ _STRINGS: dict[str, dict[str, str]] = {
     "about_hijri":        {"id": "Kalender Hijriah",               "en": "Hijri Calendar"},
     "about_geo":          {"id": "Geolokasi",                      "en": "Geolocation"},
     "about_fw":           {"id": "Framework",                      "en": "Framework"},
+    "about_quran_data":   {"id": "Data Al-Qur'an",                 "en": "Quran Data"},
+    "about_audio_fajr":   {"id": "Audio Adzan Subuh",              "en": "Fajr Adzan Audio"},
+    "about_audio_other":  {"id": "Audio Adzan Lainnya",            "en": "Other Adzan Audio"},
+    "about_audio_edit":   {"id": "Audio diedit via",               "en": "Audio edited with"},
     "hint_theme_save":    {"id": "Perubahan tema diterapkan setelah disimpan.", "en": "Theme changes apply after saving."},
 
     # ── Auto-update banner ────────────────────────────────────────────────────
