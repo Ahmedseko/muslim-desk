@@ -133,10 +133,13 @@ class QuranPage(QWidget):
         self._audio_out  = QAudioOutput(self)
         self._player.setAudioOutput(self._audio_out)
         self._audio_out.setVolume(1.0)
-        self._playing_btn: QPushButton | None = None
+        self._playing_btn = None
+        self._playing_ayah: int = 0
+        self._playing_surah_audio: int = 0
         self._audio_sig = _AudioSignal()
         self._audio_sig.ready.connect(self._on_audio_ready)
         self._audio_sig.error.connect(self._on_audio_error)
+        self._player.playbackStateChanged.connect(self._on_playback_state_changed)
         self._current_reciter = _RECITERS[0][1]   # default Alafasy
 
         self._build()
@@ -718,9 +721,9 @@ class QuranPage(QWidget):
         self._cache_lbl.setText(t("quran_cached") if from_cache else "")
         self._clear_verses()
 
-        # Stop any playing audio
-        self._player.stop()
+        # Stop any playing audio (clear btn first so handler skips auto-advance)
         self._playing_btn = None
+        self._player.stop()
 
         # Clear verse search
         self._verse_search.blockSignals(True)
@@ -776,17 +779,21 @@ class QuranPage(QWidget):
 
     # ─── audio ────────────────────────────────────────────────────────────────
 
-    def _play_verse(self, surah: int, ayah: int, btn: "AudioPlayButton"):
-        # Stop currently playing if same button
+    def _play_verse(self, surah: int, ayah: int, btn):
+        # Toggle off if same button clicked again
         if self._playing_btn is btn:
-            self._player.stop()
+            self._playing_btn = None   # clear BEFORE stop → handler won't auto-advance
             btn.set_playing(False)
-            self._playing_btn = None
+            self._player.stop()
             return
 
         # Reset previous button
         if self._playing_btn is not None:
             self._playing_btn.set_playing(False)
+        self._playing_btn = None   # temporarily clear while switching
+
+        self._playing_surah_audio = surah
+        self._playing_ayah = ayah
 
         global_num = _GLOBAL_OFFSET[surah - 1] + ayah - 1
         edition    = self._current_reciter
@@ -815,32 +822,51 @@ class QuranPage(QWidget):
 
     def _on_audio_ready(self, path: str, btn):
         if self._playing_btn is not btn:
-            return  # user switched away
+            return
         self._player.setSource(QUrl.fromLocalFile(path))
         self._player.play()
         btn.set_playing(True)
-        self._player.playbackStateChanged.connect(
-            lambda state, b=btn: self._on_playback_changed(state, b)
-        )
+        self._scroll_to_ayah(self._playing_ayah)
 
     def _on_audio_error(self, btn):
         if self._playing_btn is btn:
             btn.set_playing(False)
             self._playing_btn = None
 
-    def _on_playback_changed(self, state, btn):
+    def _on_playback_state_changed(self, state):
         from PyQt6.QtMultimedia import QMediaPlayer as _MP
-        if state == _MP.PlaybackState.StoppedState:
-            try:
-                if btn and self._playing_btn is btn:
-                    btn.set_playing(False)
-                    self._playing_btn = None
-            except RuntimeError:
-                pass
-            try:
-                self._player.playbackStateChanged.disconnect()
-            except Exception:
-                pass
+        if state != _MP.PlaybackState.StoppedState:
+            return
+        btn = self._playing_btn
+        if btn is None:
+            return   # stopped programmatically — no auto-advance
+        try:
+            btn.set_playing(False)
+        except RuntimeError:
+            pass
+        self._playing_btn = None
+        self._auto_advance()
+
+    def _scroll_to_ayah(self, ayah: int):
+        for num, widget, _ in self._verse_widgets:
+            if num == ayah:
+                self._verse_scroll.ensureWidgetVisible(widget)
+                break
+
+    def _auto_advance(self):
+        next_ayah = self._playing_ayah + 1
+        surah = self._playing_surah_audio
+        if surah != self._current_surah:
+            return
+        total = _SURAHS[surah - 1][3]
+        if next_ayah > total:
+            return
+        for num, widget, _ in self._verse_widgets:
+            if num == next_ayah and widget.isVisible():
+                play_btn = widget.findChild(AudioPlayButton)
+                if play_btn:
+                    self._play_verse(surah, next_ayah, play_btn)
+                break
 
     def _make_verse_widget(self, num: int, arabic: str, translation: str,
                            lang: str, surah: int) -> QFrame:
