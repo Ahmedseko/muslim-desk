@@ -17,6 +17,7 @@ from .. import theme as th
 from ..widgets import VerseNumberBadge, AudioPlayButton
 from ...i18n import t, get_language
 from ...core.smtc import SMTCManager
+from ...core.tajweed import to_html as tajweed_to_html, legend_html as tajweed_legend
 
 _CACHE_DIR      = Path.home() / ".muslim_desk" / "quran"
 _AUDIO_CACHE_DIR = _CACHE_DIR / "audio"
@@ -106,7 +107,7 @@ for _s in _SURAHS:
 
 
 class _QuranSignal(QObject):
-    loaded = pyqtSignal(list, list, bool)   # arabic_ayahs, id_ayahs, from_cache
+    loaded = pyqtSignal(list, list, list, bool)  # arabic, id, tajweed, from_cache
     error  = pyqtSignal(str)
 
 
@@ -332,6 +333,19 @@ class QuranPage(QWidget):
             f"background: transparent; padding: 14px 0;"
         )
         root.addWidget(self._bismillah_lbl)
+
+        # ── Tajweed legend
+        self._tajweed_legend_lbl = QLabel()
+        self._tajweed_legend_lbl.setTextFormat(Qt.TextFormat.RichText)
+        self._tajweed_legend_lbl.setWordWrap(True)
+        self._tajweed_legend_lbl.setAlignment(Qt.AlignmentFlag.AlignRight)
+        self._tajweed_legend_lbl.setStyleSheet(
+            f"font-size: 11px; background: transparent; padding: 2px 0;"
+        )
+        self._tajweed_legend_lbl.setText(
+            tajweed_legend(get_language())
+        )
+        root.addWidget(self._tajweed_legend_lbl)
 
         # ── Verse search bar + reciter selector
         tools_row = QHBoxLayout()
@@ -686,10 +700,11 @@ class QuranPage(QWidget):
 
         if not force and cache_path.exists():
             try:
-                data   = json.loads(cache_path.read_text(encoding="utf-8"))
-                arabic = data["arabic"]
-                trans  = data["trans"]
-                self._sig.loaded.emit(arabic, trans, True)
+                data    = json.loads(cache_path.read_text(encoding="utf-8"))
+                arabic  = data["arabic"]
+                trans   = data["trans"]
+                tajweed = data.get("tajweed", [])
+                self._sig.loaded.emit(arabic, trans, tajweed, True)
                 return
             except Exception:
                 pass
@@ -710,22 +725,37 @@ class QuranPage(QWidget):
             arabic = [a["text"] for a in arabic_ed["ayahs"]]
             trans  = [a["text"] for a in trans_ed["ayahs"]]
 
+            # Fetch tajweed edition (best-effort — empty list on failure)
+            tajweed: list[str] = []
+            try:
+                rt = requests.get(
+                    f"https://api.alquran.cloud/v1/surah/{num}/quran-tajweed",
+                    timeout=10,
+                )
+                if rt.ok:
+                    tajweed = [a["text"] for a in rt.json()["data"]["ayahs"]]
+            except Exception:
+                pass
+
             try:
                 _CACHE_DIR.mkdir(parents=True, exist_ok=True)
                 cache_path.write_text(
-                    json.dumps({"arabic": arabic, "trans": trans}, ensure_ascii=False),
+                    json.dumps(
+                        {"arabic": arabic, "trans": trans, "tajweed": tajweed},
+                        ensure_ascii=False,
+                    ),
                     encoding="utf-8",
                 )
             except Exception:
                 pass
 
-            self._sig.loaded.emit(arabic, trans, False)
+            self._sig.loaded.emit(arabic, trans, tajweed, False)
         except Exception:
             self._sig.error.emit(t("quran_offline"))
 
     # ─── display ─────────────────────────────────────────────────────────────
 
-    def _on_loaded(self, arabic: list, indo: list, from_cache: bool):
+    def _on_loaded(self, arabic: list, indo: list, tajweed: list, from_cache: bool):
         self._status_lbl.hide()
         self._retry_btn.hide()
         self._cache_lbl.setText(t("quran_cached") if from_cache else "")
@@ -746,8 +776,10 @@ class QuranPage(QWidget):
 
         lang = get_language()
         self._verse_widgets.clear()
-        for i, (ar, tr) in enumerate(zip(arabic, indo), start=1):
-            widget = self._make_verse_widget(i, ar, tr, lang, self._current_surah)
+        # Pad tajweed list so zip is safe when tajweed is empty / shorter
+        taj_padded = list(tajweed) + [""] * max(0, len(arabic) - len(tajweed))
+        for i, (ar, tr, taj) in enumerate(zip(arabic, indo, taj_padded), start=1):
+            widget = self._make_verse_widget(i, ar, tr, taj, lang, self._current_surah)
             self._verse_layout.addWidget(widget)
             self._verse_widgets.append((i, widget, tr))
 
@@ -932,7 +964,7 @@ class QuranPage(QWidget):
                     break
 
     def _make_verse_widget(self, num: int, arabic: str, translation: str,
-                           lang: str, surah: int) -> QFrame:
+                           tajweed_text: str, lang: str, surah: int) -> QFrame:
         frame = QFrame()
         frame.setStyleSheet(
             f"QFrame {{ background: {'transparent' if num % 2 == 0 else th.SURFACE}; "
@@ -951,15 +983,20 @@ class QuranPage(QWidget):
         ar_row.addWidget(badge, 0, Qt.AlignmentFlag.AlignVCenter)
         ar_row.addSpacing(18)
 
-        # Arabic text (fills, right-aligned = reads from right)
-        ar_lbl = QLabel(arabic)
+        # Arabic text — colored tajweed HTML when available, plain text as fallback
+        ar_lbl = QLabel()
         ar_lbl.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         ar_lbl.setWordWrap(True)
+        ar_lbl.setTextFormat(Qt.TextFormat.RichText)
         ar_lbl.setStyleSheet(
             f"font-size: 28px; line-height: 2.2; color: {th.HEADING}; "
             f"font-family: 'Amiri', 'Traditional Arabic', 'Arial Unicode MS', 'Arial'; "
             f"background: transparent; padding: 4px 0;"
         )
+        if tajweed_text:
+            ar_lbl.setText(tajweed_to_html(tajweed_text, base_color=th.HEADING))
+        else:
+            ar_lbl.setText(arabic)
         ar_row.addWidget(ar_lbl, 1)
         ar_row.addSpacing(12)
 
