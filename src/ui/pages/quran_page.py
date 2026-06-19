@@ -480,17 +480,39 @@ class QuranPage(QWidget):
     def _update_bm_btn(btn: QPushButton, bookmarked: bool):
         if bookmarked:
             btn.setText("🔖")
+            btn.setToolTip("Remove bookmark")
             btn.setStyleSheet(
-                f"QPushButton {{ background: rgba(253,224,71,0.18); border: 1px solid rgba(253,224,71,0.6); "
-                f"border-radius: 6px; color: #fde047; font-size: 14px; }}"
-                f"QPushButton:hover {{ background: rgba(253,224,71,0.30); }}"
+                "QPushButton {"
+                "  background: qlineargradient(x1:0,y1:0,x2:1,y2:1,"
+                "    stop:0 rgba(251,191,36,0.30),stop:1 rgba(217,119,6,0.25));"
+                "  border: 1.5px solid #fbbf24;"
+                "  border-radius: 8px;"
+                "  color: #fbbf24;"
+                "  font-size: 15px;"
+                "  padding: 0;"
+                "}"
+                "QPushButton:hover {"
+                "  background: rgba(251,191,36,0.45);"
+                "  border-color: #f59e0b;"
+                "}"
             )
         else:
             btn.setText("🔖")
+            btn.setToolTip("Add bookmark")
             btn.setStyleSheet(
-                f"QPushButton {{ background: transparent; border: 1px solid {th.BORDER}; "
-                f"border-radius: 6px; color: {th.MUTED}; font-size: 14px; opacity: 0.5; }}"
-                f"QPushButton:hover {{ border-color: #fde047; color: #fde047; }}"
+                f"QPushButton {{"
+                f"  background: transparent;"
+                f"  border: 1px solid {th.BORDER};"
+                f"  border-radius: 8px;"
+                f"  color: {th.MUTED};"
+                f"  font-size: 15px;"
+                f"  padding: 0;"
+                f"}}"
+                f"QPushButton:hover {{"
+                f"  background: rgba(251,191,36,0.10);"
+                f"  border-color: #fbbf24;"
+                f"  color: #fbbf24;"
+                f"}}"
             )
 
     # ─── last-read banner ─────────────────────────────────────────────────────
@@ -653,18 +675,20 @@ class QuranPage(QWidget):
         top_row = QHBoxLayout()
 
         badge = QLabel(str(num))
-        badge.setFixedSize(34, 34)
+        badge.setFixedSize(32, 32)
         badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
         badge.setStyleSheet(
-            f"background: {th.SURFACE_2}; border: 1px solid {th.BORDER}; "
-            f"border-radius: 17px; color: {th.MUTED}; font-size: 12px; font-weight: 700;"
+            "background: qlineargradient(x1:0,y1:0,x2:1,y2:1,"
+            "stop:0 #fb923c,stop:1 #c2410c);"
+            "border-radius: 16px; color: #ffffff;"
+            "font-size: 11px; font-weight: 800; border: none;"
         )
         top_row.addWidget(badge)
         top_row.addStretch()
 
         bm_btn = QPushButton("🔖")
         bm_btn.setObjectName("BmBtn")
-        bm_btn.setFixedSize(34, 34)
+        bm_btn.setFixedSize(36, 32)
         bm_btn.setProperty("ayah_num", num)
         bookmarked = self._is_bookmarked(surah, num)
         self._update_bm_btn(bm_btn, bookmarked)
