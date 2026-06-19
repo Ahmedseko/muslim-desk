@@ -30,7 +30,7 @@ OutputDir=..\release
 OutputBaseFilename=MuslimDesk-Setup-v{#AppVersion}
 SetupIconFile=..\assets\icon.ico
 
-; ── Compression (maksimum)
+; ── Compression
 Compression=lzma2/ultra64
 SolidCompression=yes
 LZMAUseSeparateProcess=yes
@@ -62,40 +62,32 @@ CreateUninstallRegKey=yes
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
-Name: "desktopicon";    Description: "Buat shortcut di Desktop";     GroupDescription: "Shortcut:"; Flags: unchecked
-Name: "startuprun";     Description: "Jalankan otomatis saat Windows Start"; GroupDescription: "Startup:";  Flags: unchecked
+Name: "desktopicon"; Description: "Create a Desktop shortcut";          GroupDescription: "Shortcuts:"; Flags: unchecked
+Name: "startuprun";  Description: "Launch automatically at Windows Start"; GroupDescription: "Startup:";   Flags: unchecked
 
 [Files]
-; Seluruh folder dist PyInstaller
 Source: "{#DistDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-; Start Menu
-Name: "{group}\{#AppName}";              Filename: "{app}\{#AppExeName}"; Comment: "Jadwal Sholat 5 Waktu"
-Name: "{group}\Uninstall {#AppName}";    Filename: "{uninstallexe}"
-; Desktop (opsional)
-Name: "{autodesktop}\{#AppName}";        Filename: "{app}\{#AppExeName}"; Tasks: desktopicon; Comment: "Jadwal Sholat 5 Waktu"
+Name: "{group}\{#AppName}";           Filename: "{app}\{#AppExeName}"; Comment: "Muslim prayer time desktop app"
+Name: "{group}\Uninstall {#AppName}"; Filename: "{uninstallexe}"
+Name: "{autodesktop}\{#AppName}";     Filename: "{app}\{#AppExeName}"; Tasks: desktopicon; Comment: "Muslim prayer time desktop app"
 
 [Registry]
-; Auto-run saat startup (opsional, hanya jika task dipilih)
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; \
   ValueType: string; ValueName: "{#AppName}"; \
   ValueData: """{app}\{#AppExeName}"""; \
   Flags: uninsdeletevalue; Tasks: startuprun
 
 [Run]
-; Tawarkan menjalankan app setelah install selesai
-Filename: "{app}\{#AppExeName}"; Description: "Jalankan {#AppName} sekarang"; \
+Filename: "{app}\{#AppExeName}"; Description: "Launch {#AppName} now"; \
   Flags: nowait postinstall skipifsilent
 
 [UninstallRun]
-; Tutup app sebelum uninstall
 Filename: "taskkill.exe"; Parameters: "/F /IM {#AppExeName}"; \
   Flags: runhidden; RunOnceId: "KillApp"
 
 [UninstallDelete]
-; Bersihkan settings user (opsional — hapus baris ini jika ingin settings tetap ada)
-; Type: filesandordirs; Name: "{userdocs}\.muslim_desk"
 
 [Code]
 procedure CurStepChanged(CurStep: TSetupStep);
