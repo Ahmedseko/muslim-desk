@@ -67,6 +67,57 @@ class VerseNumberBadge(QLabel):
         p.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, self.text())
 
 
+# ───────────────────────── Audio play button ────────────────────────────────
+
+class AudioPlayButton(QPushButton):
+    """32×32 button that draws a play triangle or stop square via QPainter."""
+
+    def __init__(self, parent: QWidget | None = None):
+        super().__init__(parent)
+        self._playing = False
+        self.setFixedSize(32, 32)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setFlat(True)
+
+    def set_playing(self, playing: bool):
+        self._playing = playing
+        self.update()
+
+    def paintEvent(self, _event):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        # Border circle background
+        accent = QColor(th.ACCENT)
+        accent_dim = QColor(th.ACCENT)
+        accent_dim.setAlpha(30)
+
+        p.setBrush(QBrush(accent_dim))
+        pen = QPen(accent)
+        pen.setWidth(1)
+        p.setPen(pen)
+        p.drawEllipse(self.rect().adjusted(1, 1, -1, -1))
+
+        # Icon
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(QBrush(accent))
+        cx, cy = self.width() // 2, self.height() // 2
+
+        if self._playing:
+            # Two vertical bars (pause)
+            bar_w, bar_h = 4, 12
+            p.drawRect(cx - 6, cy - bar_h // 2, bar_w, bar_h)
+            p.drawRect(cx + 2, cy - bar_h // 2, bar_w, bar_h)
+        else:
+            # Right-pointing triangle (play)
+            tri = QPolygonF([
+                QPointF(cx - 5, cy - 7),
+                QPointF(cx - 5, cy + 7),
+                QPointF(cx + 7, cy),
+            ])
+            p.drawPolygon(tri)
+
+
 # ───────────────────────── App icon (generated) ─────────────────────────────
 
 def make_app_icon(size: int = 64) -> QIcon:

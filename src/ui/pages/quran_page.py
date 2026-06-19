@@ -12,7 +12,7 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                               QLineEdit, QSizePolicy)
 
 from .. import theme as th
-from ..widgets import VerseNumberBadge
+from ..widgets import VerseNumberBadge, AudioPlayButton
 from ...i18n import t, get_language
 
 _CACHE_DIR      = Path.home() / ".muslim_desk" / "quran"
@@ -776,24 +776,23 @@ class QuranPage(QWidget):
 
     # ─── audio ────────────────────────────────────────────────────────────────
 
-    def _play_verse(self, surah: int, ayah: int, btn: QPushButton):
+    def _play_verse(self, surah: int, ayah: int, btn: "AudioPlayButton"):
         # Stop currently playing if same button
         if self._playing_btn is btn:
             self._player.stop()
-            btn.setText("🔊")
+            btn.set_playing(False)
             self._playing_btn = None
             return
 
         # Reset previous button
         if self._playing_btn is not None:
-            self._playing_btn.setText("🔊")
+            self._playing_btn.set_playing(False)
 
         global_num = _GLOBAL_OFFSET[surah - 1] + ayah - 1
         edition    = self._current_reciter
         cache_file = _AUDIO_CACHE_DIR / edition / f"{global_num}.mp3"
 
         self._playing_btn = btn
-        btn.setText(t("quran_audio_loading"))
 
         if cache_file.exists():
             self._on_audio_ready(str(cache_file), btn)
@@ -805,7 +804,7 @@ class QuranPage(QWidget):
                 daemon=True,
             ).start()
 
-    def _download_audio(self, url: str, cache_file: Path, btn: QPushButton):
+    def _download_audio(self, url: str, cache_file: Path, btn):
         try:
             import urllib.request
             cache_file.parent.mkdir(parents=True, exist_ok=True)
@@ -814,27 +813,27 @@ class QuranPage(QWidget):
         except Exception:
             self._audio_sig.error.emit(btn)
 
-    def _on_audio_ready(self, path: str, btn: QPushButton):
+    def _on_audio_ready(self, path: str, btn):
         if self._playing_btn is not btn:
             return  # user switched away
         self._player.setSource(QUrl.fromLocalFile(path))
         self._player.play()
-        btn.setText("⏹️")
+        btn.set_playing(True)
         self._player.playbackStateChanged.connect(
             lambda state, b=btn: self._on_playback_changed(state, b)
         )
 
-    def _on_audio_error(self, btn: QPushButton):
+    def _on_audio_error(self, btn):
         if self._playing_btn is btn:
-            btn.setText(t("quran_audio_error"))
+            btn.set_playing(False)
             self._playing_btn = None
 
-    def _on_playback_changed(self, state, btn: QPushButton):
+    def _on_playback_changed(self, state, btn):
         from PyQt6.QtMultimedia import QMediaPlayer as _MP
         if state == _MP.PlaybackState.StoppedState:
             try:
                 if btn and self._playing_btn is btn:
-                    btn.setText("🔊")
+                    btn.set_playing(False)
                     self._playing_btn = None
             except RuntimeError:
                 pass
@@ -890,13 +889,7 @@ class QuranPage(QWidget):
         ar_row.addSpacing(4)
 
         # Audio play button
-        play_btn = QPushButton("🔊")
-        play_btn.setFixedSize(32, 32)
-        play_btn.setStyleSheet(
-            f"QPushButton {{ background: transparent; border: 1px solid {th.BORDER};"
-            f" border-radius: 8px; font-size: 14px; }}"
-            f"QPushButton:hover {{ background: {th.ACCENT_DK}22; border-color: {th.ACCENT_DK}; }}"
-        )
+        play_btn = AudioPlayButton()
         play_btn.clicked.connect(
             lambda _, s=surah, a=num, b=play_btn: self._play_verse(s, a, b)
         )
