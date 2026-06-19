@@ -1,8 +1,9 @@
-"""Hadith reader page — major shahih collections via api.hadith.gading.dev"""
+"""Hadith reader page — major shahih collections via api.myquran.com"""
 from __future__ import annotations
 
 import json
 import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 from PyQt6.QtCore import Qt, QObject, pyqtSignal, QTimer
@@ -14,16 +15,16 @@ from .. import theme as th
 from ...i18n import t, get_language
 
 _CACHE_DIR = Path.home() / ".muslim_desk" / "hadith"
-_API_BASE   = "https://api.hadith.gading.dev/books/{book}?range={start}-{end}"
+_API_BASE   = "https://api.myquran.com/v2/hadits/{book}/{number}"
 _PER_PAGE   = 20
 
 _COLLECTIONS = [
-    ("Shahih Bukhari",    "bukhari",   7563),
-    ("Shahih Muslim",     "muslim",    3032),
-    ("Sunan Abu Dawud",   "abu-dawud", 5274),
-    ("Sunan Tirmidzi",    "tirmidzi",  3956),
-    ("Sunan An-Nasai",    "nasai",     5761),
-    ("Sunan Ibnu Majah",  "ibn-majah", 4341),
+    ("Shahih Bukhari",    "bukhari",   6638),
+    ("Shahih Muslim",     "muslim",    4930),
+    ("Sunan Abu Dawud",   "abu-dawud", 4419),
+    ("Sunan Tirmidzi",    "tirmidzi",  3625),
+    ("Sunan An-Nasai",    "nasai",     5364),
+    ("Sunan Ibnu Majah",  "ibnu-majah", 4285),
 ]
 
 
@@ -239,6 +240,18 @@ class HadithPage(QWidget):
             daemon=True,
         ).start()
 
+    def _fetch_one(self, book: str, number: int) -> dict | None:
+        """Fetch a single hadith from myquran.com API."""
+        import requests
+        url = _API_BASE.format(book=book, number=number)
+        r = requests.get(url, timeout=15)
+        r.raise_for_status()
+        body = r.json()
+        if not body.get("status"):
+            return None
+        d = body.get("data", {})
+        return {"number": d.get("number", number), "arab": d.get("arab", ""), "id": d.get("id", "")}
+
     def _fetch_thread(self, book: str, start: int, end: int, page: int, force: bool):
         cache_path = _CACHE_DIR / f"{book}_{start}_{end}.json"
 
@@ -251,14 +264,23 @@ class HadithPage(QWidget):
                 pass
 
         try:
-            import requests
-            url = _API_BASE.format(book=book, start=start, end=end)
-            r = requests.get(url, timeout=15)
-            r.raise_for_status()
-            body     = r.json()
-            d        = body.get("data", {})
-            hadiths  = d.get("hadiths", [])
-            total    = d.get("available", self._total)
+            numbers = list(range(start, end + 1))
+            hadiths: list[dict] = [None] * len(numbers)
+
+            with ThreadPoolExecutor(max_workers=10) as pool:
+                futures = {pool.submit(self._fetch_one, book, n): i
+                           for i, n in enumerate(numbers)}
+                for fut in as_completed(futures):
+                    idx = futures[fut]
+                    try:
+                        result = fut.result()
+                        if result:
+                            hadiths[idx] = result
+                    except Exception:
+                        pass
+
+            hadiths = [h for h in hadiths if h is not None]
+            total   = self._total
 
             try:
                 _CACHE_DIR.mkdir(parents=True, exist_ok=True)
