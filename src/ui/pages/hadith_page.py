@@ -101,7 +101,7 @@ class HadithPage(QWidget):
         self._search_box.returnPressed.connect(self._on_search)
         ctrl_row.addWidget(self._search_box)
 
-        btn_search = QPushButton(t("btn_search_city").replace("🔍 ", ""))
+        btn_search = QPushButton(t("btn_search"))
         btn_search.setFixedHeight(32)
         btn_search.clicked.connect(self._on_search)
         ctrl_row.addWidget(btn_search)
@@ -381,7 +381,7 @@ class HadithPage(QWidget):
             ar_lbl.setWordWrap(True)
             ar_lbl.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
             ar_lbl.setStyleSheet(
-                f"font-size: 22px; line-height: 2.0; color: {th.HEADING}; "
+                f"font-size: 22px; line-height: 2.0; color: {th.ACCENT}; "
                 f"font-family: 'Amiri', 'Traditional Arabic', 'Arial Unicode MS', 'Arial'; "
                 f"background: transparent; padding: 4px 0;"
             )
@@ -404,7 +404,7 @@ class HadithPage(QWidget):
             tr_lbl = QLabel(trans)
             tr_lbl.setWordWrap(True)
             tr_lbl.setStyleSheet(
-                f"font-size: 13px; color: {th.TEXT}; background: transparent; "
+                f"font-size: 13px; color: {th.HEADING}; background: transparent; "
                 f"line-height: 1.7; padding: 2px 0;"
             )
             lay.addWidget(tr_lbl)

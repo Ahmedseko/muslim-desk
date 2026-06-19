@@ -130,6 +130,7 @@ _STRINGS: dict[str, dict[str, str]] = {
     "lbl_country":        {"id": "Negara",                         "en": "Country"},
     "lbl_search_city":    {"id": "Cari kota / kecamatan",          "en": "Search city / district"},
     "btn_search_city":    {"id": "🔍 Cari Kota / Kecamatan",       "en": "🔍 Search City / District"},
+    "btn_search":         {"id": "Cari",                            "en": "Search"},
     "hint_city":          {"id": "Gunakan 'Cari Kota' untuk menemukan kecamatan/kabupaten secara akurat.", "en": "Use 'Search City' to find your district accurately."},
     "loc_set_to":         {"id": "✅ Lokasi diset ke: ",           "en": "✅ Location set to: "},
 
