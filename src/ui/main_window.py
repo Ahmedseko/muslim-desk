@@ -89,9 +89,16 @@ class MainWindow(QMainWindow):
     def _setup_tray(self):
         if not QSystemTrayIcon.isSystemTrayAvailable():
             return
-        self._tray = QSystemTrayIcon(self.icon, self)
-        self._tray.setToolTip(APP_NAME)
+        if self._tray is None:
+            self._tray = QSystemTrayIcon(self.icon, self)
+            self._tray.setToolTip(APP_NAME)
+            self._tray.activated.connect(self._on_tray_activated)
+            self._tray.show()
+        self._rebuild_tray_menu()
 
+    def _rebuild_tray_menu(self):
+        if self._tray is None:
+            return
         menu = QMenu()
         act_show = QAction(t("tray_show"), self)
         act_show.triggered.connect(self._show_from_tray)
@@ -101,8 +108,6 @@ class MainWindow(QMainWindow):
         menu.addSeparator()
         menu.addAction(act_quit)
         self._tray.setContextMenu(menu)
-        self._tray.activated.connect(self._on_tray_activated)
-        self._tray.show()
 
     def _show_from_tray(self):
         self.showNormal()
@@ -296,6 +301,7 @@ class MainWindow(QMainWindow):
         self._notif.custom_sound_path = self.settings.custom_sound_path
         self._notif.prayer_sounds     = dict(self.settings.prayer_sounds)
         self._notif.toast_enabled     = self.settings.toast_enabled
+        self._rebuild_tray_menu()
         if hasattr(self._dash, "refresh"):
             self._dash.refresh()
         if hasattr(self._qibla, "refresh"):
@@ -343,8 +349,8 @@ class MainWindow(QMainWindow):
             key = f"{today}_{name}"
             if key in self._triggered:
                 continue
-            delta = abs((dt - now).total_seconds())
-            if delta <= 60:
+            delta = (now - dt).total_seconds()  # positive = prayer time has passed
+            if 0 <= delta < 90:
                 self._triggered.add(key)
                 self._fire_prayer_alert(name, dt.strftime("%H:%M"))
 
