@@ -1,11 +1,10 @@
-"""Qibla compass page."""
+"""Qibla compass page — compact modern layout."""
 from __future__ import annotations
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
-                              QFrame, QPushButton)
+from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame)
 
-from ..widgets import QiblaCompass, SectionCard
+from ..widgets import QiblaCompass
 from .. import theme as th
 from ...core.qibla_calculator import qibla_bearing, distance_to_mecca_km
 from ...i18n import t, compass_dir as _compass_dir
@@ -18,149 +17,242 @@ class QiblaPage(QWidget):
         self._build()
         self.refresh()
 
+    # ─── build ──────────────────────────────────────────────────────────────
+
     def _build(self):
         root = QVBoxLayout(self)
         root.setContentsMargins(28, 20, 28, 20)
-        root.setSpacing(16)
+        root.setSpacing(14)
 
         # Header
         lbl = QLabel(t("qibla_title"))
         lbl.setObjectName("H1")
         root.addWidget(lbl)
-
         sub = QLabel(t("qibla_subtitle"))
         sub.setObjectName("Muted")
         root.addWidget(sub)
 
-        # ── Info bar: sensor limitation warning
-        info_bar = QFrame()
-        info_bar.setObjectName("Card")
-        info_bar.setStyleSheet(
-            f"QFrame#Card {{ background: {th.SURFACE}; border: 1px solid {th.BORDER};"
-            f"border-left: 4px solid {th.WARN}; border-radius: 10px; }}"
-        )
-        info_layout = QHBoxLayout(info_bar)
-        info_layout.setContentsMargins(16, 12, 16, 12)
-        info_layout.setSpacing(12)
-
-        icon_lbl = QLabel("⚠️")
-        icon_lbl.setStyleSheet("font-size: 18px; background: transparent;")
-        info_layout.addWidget(icon_lbl)
-
-        info_text = QLabel(t("qibla_static_warn"))
-        info_text.setStyleSheet(f"color: {th.TEXT}; font-size: 13px; background: transparent;")
-        info_text.setWordWrap(True)
-        info_text.setTextFormat(Qt.TextFormat.RichText)
-        info_layout.addWidget(info_text, 1)
-        root.addWidget(info_bar)
-
-        # Content row: compass on left, info on right
+        # ── Content row
         content = QHBoxLayout()
-        content.setSpacing(20)
-
-        # ── Compass card
-        compass_card = QFrame()
-        compass_card.setObjectName("Card")
-        compass_layout = QVBoxLayout(compass_card)
-        compass_layout.setContentsMargins(20, 20, 20, 20)
-        compass_layout.setSpacing(10)
-        compass_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        lbl_compass = QLabel(t("qibla_compass_lbl"))
-        lbl_compass.setStyleSheet(
-            f"font-size: 14px; font-weight: 600; color: {th.HEADING}; background: transparent;"
-        )
-        lbl_compass.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        compass_layout.addWidget(lbl_compass)
-
-        self._compass = QiblaCompass()
-        compass_layout.addWidget(self._compass, 1)
-
-        # Bearing label
-        self._bearing_lbl = QLabel(f"0.0° {t('qibla_from_north')}")
-        self._bearing_lbl.setStyleSheet(
-            f"font-size: 18px; font-weight: 700; color: {th.ACCENT}; background: transparent;"
-        )
-        self._bearing_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        compass_layout.addWidget(self._bearing_lbl)
-
-        # Needle legend
-        legend = QHBoxLayout()
-        legend.setSpacing(16)
-        legend.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        for color, key in (("#ef4444", "compass_north_lbl"), (th.ACCENT_DK, "compass_qibla_lbl")):
-            lbl_leg = QLabel(t(key))
-            lbl_leg.setStyleSheet(f"color: {color}; font-size: 12px; background: transparent;")
-            legend.addWidget(lbl_leg)
-        compass_layout.addLayout(legend)
-
-        content.addWidget(compass_card, 3)
-
-        # ── Info panel (right)
-        info_col = QVBoxLayout()
-        info_col.setSpacing(12)
-
-        # Location card
-        self._loc_card = SectionCard(t("your_location_card"))
-        self._loc_lat  = self._add_info_row(self._loc_card, t("lbl_latitude_short"), "—")
-        self._loc_lon  = self._add_info_row(self._loc_card, t("lbl_longitude_short"), "—")
-        self._loc_city = self._add_info_row(self._loc_card, t("lbl_city_short"), "—")
-        info_col.addWidget(self._loc_card)
-
-        # Qibla card
-        self._qibla_card = SectionCard(t("qibla_card_title"))
-        self._q_bearing  = self._add_info_row(self._qibla_card, t("qibla_angle_lbl"), "—")
-        self._q_dir      = self._add_info_row(self._qibla_card, t("compass_dir_lbl"), "—")
-        self._q_dist     = self._add_info_row(self._qibla_card, t("dist_to_mecca"), "—")
-        info_col.addWidget(self._qibla_card)
-
-        # Kaaba reference card
-        kaaba_card = SectionCard(t("kaaba_ref_card"))
-        self._add_info_row(kaaba_card, t("lbl_latitude_short"), "21.4225°")
-        self._add_info_row(kaaba_card, t("lbl_longitude_short"), "39.8262°")
-        self._add_info_row(kaaba_card, t("lbl_city_short"), t("kaaba_location_val"))
-        info_col.addWidget(kaaba_card)
-
-        # How-to-use card
-        cara_card = SectionCard(t("how_to_use_card"))
-        cara_text = QLabel(t("qibla_steps"))
-        cara_text.setStyleSheet(f"color: {th.TEXT}; font-size: 13px; background: transparent;")
-        cara_text.setWordWrap(True)
-        cara_text.setTextFormat(Qt.TextFormat.RichText)
-        cara_card.body.addWidget(cara_text)
-        info_col.addWidget(cara_card)
-
-        info_col.addStretch()
-        content.addLayout(info_col, 2)
+        content.setSpacing(16)
+        content.addWidget(self._build_compass_card())
+        content.addLayout(self._build_right_col(), 1)
         root.addLayout(content, 1)
 
-    def _add_info_row(self, card: SectionCard, label: str, value: str) -> QLabel:
-        row = QHBoxLayout()
-        row.setSpacing(8)
-        lbl = QLabel(label)
-        lbl.setStyleSheet(f"color: {th.MUTED}; font-size: 13px; min-width: 140px; background: transparent;")
-        val = QLabel(value)
-        val.setStyleSheet(f"color: {th.TEXT}; font-size: 13px; font-weight: 600; background: transparent;")
-        row.addWidget(lbl)
-        row.addWidget(val, 1)
-        card.body.addLayout(row)
-        return val
+    # ─── left: compact compass card ─────────────────────────────────────────
+
+    def _build_compass_card(self) -> QFrame:
+        card = QFrame()
+        card.setObjectName("Card")
+        card.setFixedWidth(264)
+        cl = QVBoxLayout(card)
+        cl.setContentsMargins(18, 16, 18, 16)
+        cl.setSpacing(8)
+
+        # Compass widget
+        self._compass = QiblaCompass()
+        self._compass.setFixedSize(220, 220)
+        cl.addWidget(self._compass, 0, Qt.AlignmentFlag.AlignHCenter)
+
+        # Big bearing number
+        self._bearing_lbl = QLabel("—")
+        self._bearing_lbl.setStyleSheet(
+            f"font-size: 32px; font-weight: 800; color: {th.ACCENT}; "
+            f"background: transparent; letter-spacing: 1px;"
+        )
+        self._bearing_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        cl.addWidget(self._bearing_lbl)
+
+        # Direction · Distance
+        self._dir_dist_lbl = QLabel("—")
+        self._dir_dist_lbl.setStyleSheet(
+            f"font-size: 13px; color: {th.MUTED}; background: transparent;"
+        )
+        self._dir_dist_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        cl.addWidget(self._dir_dist_lbl)
+
+        # Needle legend
+        leg = QHBoxLayout()
+        leg.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        leg.setSpacing(16)
+        for color, text in (("#ef4444", "● Utara (N)"), (th.ACCENT_DK, "● Kiblat")):
+            ll = QLabel(text)
+            ll.setStyleSheet(f"color: {color}; font-size: 11px; background: transparent;")
+            leg.addWidget(ll)
+        cl.addLayout(leg)
+
+        # Static-compass note
+        warn = QLabel("🧭 Kompas statis — arahkan laptop ke Utara")
+        warn.setStyleSheet(
+            f"color: {th.WARN}; font-size: 11px; background: transparent; padding-top: 4px;"
+        )
+        warn.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        warn.setWordWrap(True)
+        cl.addWidget(warn)
+
+        return card
+
+    # ─── right: info + steps ────────────────────────────────────────────────
+
+    def _build_right_col(self) -> QVBoxLayout:
+        col = QVBoxLayout()
+        col.setSpacing(12)
+
+        # Row 1: Location + Qibla stats
+        stats_row = QHBoxLayout()
+        stats_row.setSpacing(12)
+        stats_row.addWidget(self._build_loc_card(), 1)
+        stats_row.addWidget(self._build_qibla_card(), 1)
+        col.addLayout(stats_row)
+
+        # Row 2: Ka'bah reference (compact single line)
+        kaaba = QFrame()
+        kaaba.setObjectName("Card")
+        kl = QHBoxLayout(kaaba)
+        kl.setContentsMargins(14, 10, 14, 10)
+        kl.setSpacing(10)
+        kl.addWidget(QLabel("🕋"), 0)
+        info = QLabel(
+            "<b>Ka'bah</b> · Masjidil Haram, Makkah Al-Mukarramah, Saudi Arabia"
+            "  <span style='color: #8b949e'>  21.4225°, 39.8262°</span>"
+        )
+        info.setStyleSheet(f"font-size: 12px; color: {th.TEXT}; background: transparent;")
+        info.setTextFormat(Qt.TextFormat.RichText)
+        kl.addWidget(info, 1)
+        col.addWidget(kaaba)
+
+        # Row 3: Steps guide
+        col.addWidget(self._build_steps_card(), 1)
+
+        return col
+
+    def _build_loc_card(self) -> QFrame:
+        card = QFrame()
+        card.setObjectName("Card")
+        vl = QVBoxLayout(card)
+        vl.setContentsMargins(14, 12, 14, 14)
+        vl.setSpacing(6)
+
+        hdr = QLabel("📍 " + t("your_location_card"))
+        hdr.setStyleSheet(
+            f"font-size: 11px; font-weight: 700; color: {th.MUTED}; "
+            f"background: transparent; text-transform: uppercase; letter-spacing: 1px;"
+        )
+        vl.addWidget(hdr)
+
+        self._loc_city = QLabel("—")
+        self._loc_city.setStyleSheet(
+            f"font-size: 15px; font-weight: 700; color: {th.HEADING}; background: transparent;"
+        )
+        self._loc_city.setWordWrap(True)
+        vl.addWidget(self._loc_city)
+
+        coords = QHBoxLayout()
+        coords.setSpacing(10)
+        self._loc_lat = QLabel("—")
+        self._loc_lat.setStyleSheet(f"font-size: 11px; color: {th.MUTED}; background: transparent;")
+        self._loc_lon = QLabel("—")
+        self._loc_lon.setStyleSheet(f"font-size: 11px; color: {th.MUTED}; background: transparent;")
+        coords.addWidget(self._loc_lat)
+        coords.addWidget(self._loc_lon)
+        coords.addStretch()
+        vl.addLayout(coords)
+
+        return card
+
+    def _build_qibla_card(self) -> QFrame:
+        card = QFrame()
+        card.setObjectName("Card")
+        vl = QVBoxLayout(card)
+        vl.setContentsMargins(14, 12, 14, 14)
+        vl.setSpacing(6)
+
+        hdr = QLabel("🕌 " + t("qibla_card_title"))
+        hdr.setStyleSheet(
+            f"font-size: 11px; font-weight: 700; color: {th.MUTED}; "
+            f"background: transparent; text-transform: uppercase; letter-spacing: 1px;"
+        )
+        vl.addWidget(hdr)
+
+        self._q_bearing_big = QLabel("—")
+        self._q_bearing_big.setStyleSheet(
+            f"font-size: 28px; font-weight: 800; color: {th.ACCENT}; background: transparent;"
+        )
+        vl.addWidget(self._q_bearing_big)
+
+        detail = QHBoxLayout()
+        detail.setSpacing(14)
+        self._q_dir = QLabel("—")
+        self._q_dir.setStyleSheet(
+            f"font-size: 13px; font-weight: 700; color: {th.TEXT}; background: transparent;"
+        )
+        self._q_dist = QLabel("—")
+        self._q_dist.setStyleSheet(f"font-size: 13px; color: {th.MUTED}; background: transparent;")
+        detail.addWidget(self._q_dir)
+        detail.addWidget(self._q_dist)
+        detail.addStretch()
+        vl.addLayout(detail)
+
+        return card
+
+    def _build_steps_card(self) -> QFrame:
+        card = QFrame()
+        card.setObjectName("Card")
+        vl = QVBoxLayout(card)
+        vl.setContentsMargins(14, 12, 14, 14)
+        vl.setSpacing(10)
+
+        hdr = QLabel("📖 " + t("how_to_use_card"))
+        hdr.setStyleSheet(
+            f"font-size: 13px; font-weight: 700; color: {th.HEADING}; background: transparent;"
+        )
+        vl.addWidget(hdr)
+
+        sep = QFrame()
+        sep.setFixedHeight(1)
+        sep.setStyleSheet(f"background: {th.BORDER};")
+        vl.addWidget(sep)
+
+        self._steps_lbl = QLabel()
+        self._steps_lbl.setStyleSheet(
+            f"font-size: 12px; color: {th.TEXT}; background: transparent; line-height: 1.8;"
+        )
+        self._steps_lbl.setWordWrap(True)
+        self._steps_lbl.setTextFormat(Qt.TextFormat.RichText)
+        vl.addWidget(self._steps_lbl)
+
+        return card
+
+    # ─── refresh ────────────────────────────────────────────────────────────
 
     def refresh(self):
         s = self._win.settings
-        lat = s.latitude
-        lon = s.longitude
-
-        bearing = qibla_bearing(lat, lon)
-        dist    = distance_to_mecca_km(lat, lon)
+        lat, lon = s.latitude, s.longitude
+        bearing   = qibla_bearing(lat, lon)
+        dist      = distance_to_mecca_km(lat, lon)
+        dir_label = _compass_dir(bearing)
+        b_int     = int(round(bearing))
 
         self._compass.set_bearing(bearing)
-        self._bearing_lbl.setText(f"{bearing:.1f}° {t('qibla_from_north')}")
+        self._bearing_lbl.setText(f"{bearing:.1f}°")
+        self._dir_dist_lbl.setText(f"{dir_label}  ·  {dist:,.0f} km dari Mekkah")
 
-        self._loc_lat.setText(f"{lat:.6f}°")
-        self._loc_lon.setText(f"{lon:.6f}°")
         self._loc_city.setText(f"{s.city}, {s.country}")
+        self._loc_lat.setText(f"Lat {lat:.4f}°")
+        self._loc_lon.setText(f"Lon {lon:.4f}°")
 
-        self._q_bearing.setText(f"{bearing:.2f}°")
-        self._q_dir.setText(_compass_dir(bearing))
-        self._q_dist.setText(f"{dist:,.1f} km")
+        self._q_bearing_big.setText(f"{bearing:.1f}°")
+        self._q_dir.setText(dir_label)
+        self._q_dist.setText(f"{dist:,.0f} km")
+
+        muted = th.MUTED
+        accent = th.ACCENT
+        self._steps_lbl.setText(
+            f"<b>1.</b> Cari arah Utara menggunakan kompas HP atau Google Maps.<br>"
+            f"<b>2.</b> Hadapkan laptop/badan ke arah <b>Utara (N)</b>.<br>"
+            f"<b>3.</b> Dari Utara, putar <b style='color:{accent}'>{b_int}° searah jarum jam</b>"
+            f" &nbsp;≈ arah <b>{dir_label}</b>.<br>"
+            f"<b>4.</b> Arah yang dihadapi = <b>Kiblat</b> ✅<br>"
+            f"<br><span style='color:{muted}; font-size:11px;'>"
+            f"💡 Untuk akurasi lebih tinggi, gunakan kompas HP dengan sudut {b_int}° dari Utara.</span>"
+        )

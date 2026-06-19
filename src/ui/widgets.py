@@ -385,72 +385,88 @@ class QiblaCompass(QWidget):
 
         W, H = self.width(), self.height()
         cx, cy = W / 2, H / 2
-        R = min(W, H) / 2 - 16
+        R       = min(W, H) / 2 - 6   # outer ring radius
+        r_inner = R - 16               # inner disc radius
 
-        # Background disc
-        p.setBrush(QBrush(QColor(th.SURFACE)))
-        p.setPen(QPen(QColor(th.BORDER), 2))
+        # ── Outer ring
+        p.setPen(QPen(QColor(th.BORDER), 1.5))
+        p.setBrush(Qt.BrushStyle.NoBrush)
         p.drawEllipse(QPointF(cx, cy), R, R)
 
-        # Cardinal labels
-        p.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
-        for angle, label in ((0, "U"), (90, "T"), (180, "S"), (270, "B")):
-            rad = math.radians(angle - 90)
-            tx = cx + (R - 18) * math.cos(rad)
-            ty = cy + (R - 18) * math.sin(rad)
-            p.setPen(QColor(th.MUTED))
-            p.drawText(QRect(int(tx) - 10, int(ty) - 10, 20, 20),
-                       Qt.AlignmentFlag.AlignCenter, label)
-
-        # Tick marks
-        p.setPen(QPen(QColor(th.BORDER), 1))
-        for deg in range(0, 360, 10):
+        # ── Tick marks in the ring band
+        for deg in range(0, 360, 5):
             rad = math.radians(deg - 90)
-            inner = R - (8 if deg % 90 == 0 else 4)
-            outer = R
+            if deg % 90 == 0:
+                t_len, lw = 11, 1.5
+            elif deg % 45 == 0:
+                t_len, lw = 7, 1.0
+            else:
+                t_len, lw = 4, 0.7
+            i_r = r_inner + 2
+            o_r = i_r + t_len
+            p.setPen(QPen(QColor(th.MUTED), lw))
             p.drawLine(
-                QPointF(cx + inner * math.cos(rad), cy + inner * math.sin(rad)),
-                QPointF(cx + outer * math.cos(rad), cy + outer * math.sin(rad)),
+                QPointF(cx + i_r * math.cos(rad), cy + i_r * math.sin(rad)),
+                QPointF(cx + o_r * math.cos(rad), cy + o_r * math.sin(rad)),
             )
 
-        # North indicator (red)
-        rad_n = math.radians(-90)
-        p.setPen(Qt.PenStyle.NoPen)
-        p.setBrush(QBrush(QColor("#ef4444")))
-        north_pts = [
-            QPointF(cx + math.cos(rad_n) * (R - 20), cy + math.sin(rad_n) * (R - 20)),
-            QPointF(cx + math.cos(rad_n + 2.44) * 10, cy + math.sin(rad_n + 2.44) * 10),
-            QPointF(cx + math.cos(rad_n - 2.44) * 10, cy + math.sin(rad_n - 2.44) * 10),
-        ]
-        p.drawPolygon(QPolygonF(north_pts))
-
-        # Qibla needle (green)
-        qibla_rad = math.radians(self._bearing - 90)
-        needle_color = QColor(th.ACCENT_DK)
-        p.setBrush(QBrush(needle_color))
-        needle_pts = [
-            QPointF(cx + math.cos(qibla_rad) * (R - 24),
-                    cy + math.sin(qibla_rad) * (R - 24)),
-            QPointF(cx + math.cos(qibla_rad + 2.8) * 12,
-                    cy + math.sin(qibla_rad + 2.8) * 12),
-            QPointF(cx + math.cos(qibla_rad + math.pi) * 18,
-                    cy + math.sin(qibla_rad + math.pi) * 18),
-            QPointF(cx + math.cos(qibla_rad - 2.8) * 12,
-                    cy + math.sin(qibla_rad - 2.8) * 12),
-        ]
-        p.drawPolygon(QPolygonF(needle_pts))
-
-        # Kaaba icon at needle tip
-        p.setFont(QFont("Segoe UI", 14))
-        tip_x = cx + math.cos(qibla_rad) * (R - 28)
-        tip_y = cy + math.sin(qibla_rad) * (R - 28)
-        p.drawText(QRect(int(tip_x) - 12, int(tip_y) - 12, 24, 24),
-                   Qt.AlignmentFlag.AlignCenter, "🕋")
-
-        # Center hub
-        p.setPen(QPen(QColor(th.BORDER), 2))
+        # ── Inner disc
+        p.setPen(QPen(QColor(th.BORDER), 1))
         p.setBrush(QBrush(QColor(th.SURFACE_2)))
-        p.drawEllipse(QPointF(cx, cy), 10, 10)
+        p.drawEllipse(QPointF(cx, cy), r_inner, r_inner)
+
+        # ── Cardinal letters (U/T/S/B)
+        p.setFont(QFont("Segoe UI", 9, QFont.Weight.Bold))
+        for deg, label, color in (
+            (0,   "U", "#ef4444"),
+            (90,  "T", th.MUTED),
+            (180, "S", th.MUTED),
+            (270, "B", th.MUTED),
+        ):
+            rad = math.radians(deg - 90)
+            tx  = cx + (r_inner - 11) * math.cos(rad)
+            ty  = cy + (r_inner - 11) * math.sin(rad)
+            p.setPen(QColor(color))
+            p.drawText(QRectF(tx - 9, ty - 9, 18, 18), Qt.AlignmentFlag.AlignCenter, label)
+
+        # ── Small dots at 45° inter-cardinal positions
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(QBrush(QColor(th.BORDER)))
+        for deg in range(45, 360, 90):
+            rad = math.radians(deg - 90)
+            dx  = cx + (r_inner - 11) * math.cos(rad)
+            dy  = cy + (r_inner - 11) * math.sin(rad)
+            p.drawEllipse(QPointF(dx, dy), 2.0, 2.0)
+
+        # ── Diamond needle helper
+        def draw_needle(angle_rad, tip_r, tail_r, half_w, color):
+            perp = angle_rad + math.pi / 2
+            pts = [
+                QPointF(cx + math.cos(angle_rad) * tip_r,
+                        cy + math.sin(angle_rad) * tip_r),
+                QPointF(cx + math.cos(perp)       * half_w,
+                        cy + math.sin(perp)       * half_w),
+                QPointF(cx - math.cos(angle_rad) * tail_r,
+                        cy - math.sin(angle_rad) * tail_r),
+                QPointF(cx - math.cos(perp)       * half_w,
+                        cy - math.sin(perp)       * half_w),
+            ]
+            p.setPen(Qt.PenStyle.NoPen)
+            p.setBrush(QBrush(QColor(color)))
+            p.drawPolygon(QPolygonF(pts))
+
+        qibla_rad = math.radians(self._bearing - 90)
+        rad_n     = math.radians(-90)
+
+        # North needle (red, shorter, drawn first)
+        draw_needle(rad_n,     r_inner - 20, 10, 4, "#ef4444")
+        # Qibla needle (green, longer, on top)
+        draw_needle(qibla_rad, r_inner - 12, 14, 6, th.ACCENT_DK)
+
+        # ── Center hub
+        p.setPen(QPen(QColor(th.BORDER), 1.5))
+        p.setBrush(QBrush(QColor(th.SURFACE)))
+        p.drawEllipse(QPointF(cx, cy), 6, 6)
 
         p.end()
 
