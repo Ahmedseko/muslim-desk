@@ -5,7 +5,7 @@ import math
 import sys
 from typing import Optional
 
-from PyQt6.QtCore import Qt, QSize, QRect, QPoint, QTimer, pyqtSignal, QPointF
+from PyQt6.QtCore import Qt, QSize, QRect, QRectF, QPoint, QTimer, pyqtSignal, QPointF
 from PyQt6.QtGui import (QPainter, QColor, QPen, QBrush, QFont, QFontMetrics,
                           QIcon, QPixmap, QLinearGradient, QRadialGradient,
                           QPainterPath, QPolygonF)
