@@ -11,6 +11,7 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                               QLineEdit, QSizePolicy)
 
 from .. import theme as th
+from ..widgets import VerseNumberBadge
 from ...i18n import t, get_language
 
 _CACHE_DIR      = Path.home() / ".muslim_desk" / "quran"
@@ -681,20 +682,7 @@ class QuranPage(QWidget):
         ar_row.setSpacing(0)
 
         # Verse number badge at LEFT (= end of Arabic verse, RTL)
-        badge = QLabel(str(num))
-        badge.setFixedSize(40, 40)
-        badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        badge.setStyleSheet(
-            "QLabel {"
-            "  background: qlineargradient(x1:0,y1:0,x2:1,y2:1,"
-            "    stop:0 #fb923c, stop:1 #c2410c);"
-            "  border-radius: 20px;"
-            "  color: #ffffff;"
-            "  font-size: 12px;"
-            "  font-weight: 800;"
-            "  border: none;"
-            "}"
-        )
+        badge = VerseNumberBadge(num)
         ar_row.addWidget(badge, 0, Qt.AlignmentFlag.AlignVCenter)
         ar_row.addSpacing(18)
 

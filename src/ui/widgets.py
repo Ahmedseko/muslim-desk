@@ -34,6 +34,39 @@ def _v(widget: QWidget) -> QVBoxLayout:
     return lo
 
 
+# ───────────────────────── Verse number badge ───────────────────────────────
+
+class VerseNumberBadge(QLabel):
+    """Circular orange gradient badge for Quran verse numbers.
+
+    Uses a custom paintEvent because Qt6 does not reliably clip QLabel
+    gradient backgrounds with border-radius from stylesheets alone.
+    """
+
+    def __init__(self, number: int, parent: QWidget | None = None):
+        super().__init__(str(number), parent)
+        self.setFixedSize(40, 40)
+        self.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+    def paintEvent(self, _event):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        grad = QLinearGradient(0.0, 0.0, float(self.width()), float(self.height()))
+        grad.setColorAt(0.0, QColor("#fb923c"))
+        grad.setColorAt(1.0, QColor("#c2410c"))
+        p.setBrush(QBrush(grad))
+        p.setPen(Qt.PenStyle.NoPen)
+        p.drawEllipse(self.rect())
+
+        p.setPen(QColor("#ffffff"))
+        font = QFont()
+        font.setPixelSize(12)
+        font.setWeight(QFont.Weight.ExtraBold)
+        p.setFont(font)
+        p.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, self.text())
+
+
 # ───────────────────────── App icon (generated) ─────────────────────────────
 
 def make_app_icon(size: int = 64) -> QIcon:
