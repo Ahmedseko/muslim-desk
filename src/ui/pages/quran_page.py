@@ -668,24 +668,39 @@ class QuranPage(QWidget):
             f"border-radius: 8px; margin: 1px 0; }}"
         )
         lay = QVBoxLayout(frame)
-        lay.setContentsMargins(20, 16, 20, 16)
+        lay.setContentsMargins(16, 16, 20, 14)
         lay.setSpacing(10)
 
-        # ── Top row: verse badge (left) + bookmark button (right)
-        top_row = QHBoxLayout()
+        # ── Arabic row: [badge at left = end of RTL] [arabic text] [bookmark]
+        ar_row = QHBoxLayout()
+        ar_row.setSpacing(0)
 
+        # Verse number badge at LEFT (= end of Arabic verse, RTL)
         badge = QLabel(str(num))
-        badge.setFixedSize(32, 32)
+        badge.setFixedSize(40, 40)
         badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
         badge.setStyleSheet(
             "background: qlineargradient(x1:0,y1:0,x2:1,y2:1,"
             "stop:0 #fb923c,stop:1 #c2410c);"
-            "border-radius: 16px; color: #ffffff;"
-            "font-size: 11px; font-weight: 800; border: none;"
+            "border-radius: 20px; color: #ffffff;"
+            "font-size: 12px; font-weight: 800; border: none;"
         )
-        top_row.addWidget(badge)
-        top_row.addStretch()
+        ar_row.addWidget(badge, 0, Qt.AlignmentFlag.AlignVCenter)
+        ar_row.addSpacing(18)
 
+        # Arabic text (fills, right-aligned = reads from right)
+        ar_lbl = QLabel(arabic)
+        ar_lbl.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        ar_lbl.setWordWrap(True)
+        ar_lbl.setStyleSheet(
+            f"font-size: 28px; line-height: 2.2; color: {th.HEADING}; "
+            f"font-family: 'Amiri', 'Traditional Arabic', 'Arial Unicode MS', 'Arial'; "
+            f"background: transparent; padding: 4px 0;"
+        )
+        ar_row.addWidget(ar_lbl, 1)
+        ar_row.addSpacing(12)
+
+        # Bookmark button at right
         bm_btn = QPushButton("🔖")
         bm_btn.setObjectName("BmBtn")
         bm_btn.setFixedSize(36, 32)
@@ -696,23 +711,13 @@ class QuranPage(QWidget):
             lambda _, s=surah, a=num, p=arabic, b=bm_btn:
                 self._toggle_bookmark(s, a, p, b)
         )
-        top_row.addWidget(bm_btn)
-        lay.addLayout(top_row)
+        ar_row.addWidget(bm_btn, 0, Qt.AlignmentFlag.AlignVCenter)
+        lay.addLayout(ar_row)
 
-        # ── Arabic text
-        ar_lbl = QLabel(arabic)
-        ar_lbl.setAlignment(Qt.AlignmentFlag.AlignRight)
-        ar_lbl.setWordWrap(True)
-        ar_lbl.setStyleSheet(
-            f"font-size: 28px; line-height: 2.2; color: {th.HEADING}; "
-            f"font-family: 'Amiri', 'Traditional Arabic', 'Arial Unicode MS', 'Arial'; "
-            f"background: transparent; padding: 6px 0;"
-        )
-        lay.addWidget(ar_lbl)
-
-        # ── Translation
+        # ── Translation (indented to align with Arabic text, not badge)
         tr_lbl = QLabel(translation)
         tr_lbl.setWordWrap(True)
+        tr_lbl.setContentsMargins(58, 0, 48, 0)   # 40px badge + 18px gap | 36px btn + 12px gap
         tr_lbl.setStyleSheet(
             f"font-size: 13px; color: {th.MUTED}; background: transparent; "
             f"padding: 2px 0; line-height: 1.6;"
