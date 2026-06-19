@@ -330,6 +330,37 @@ _STRINGS: dict[str, dict[str, str]] = {
     "quran_bm_open":    {"id": "Buka",                   "en": "Open"},
     "quran_bm_del":     {"id": "Hapus",                  "en": "Delete"},
 
+    # ── Doa page ─────────────────────────────────────────────────────────────
+    "nav_doa":              {"id": "Doa Harian",              "en": "Daily Duas"},
+    "doa_title":            {"id": "Doa Harian",              "en": "Daily Duas"},
+    "doa_subtitle":         {"id": "Kumpulan doa dari hadits shahih",
+                             "en": "Duas from authentic hadith"},
+    "doa_tab_daily":        {"id": "Sehari-hari",             "en": "Daily"},
+    "doa_tab_sleep":        {"id": "Tidur & Bangun",          "en": "Sleep"},
+    "doa_tab_home":         {"id": "Rumah & Masjid",          "en": "Home & Mosque"},
+    "doa_tab_travel":       {"id": "Perjalanan",              "en": "Travel"},
+    "doa_transliteration":  {"id": "Transliterasi:",          "en": "Transliteration:"},
+    "doa_meaning":          {"id": "Artinya:",                "en": "Meaning:"},
+    "doa_source":           {"id": "Sumber:",                 "en": "Source:"},
+
+    # ── Prayer log ────────────────────────────────────────────────────────────
+    "log_title":            {"id": "📋  Catatan Sholat Hari Ini", "en": "📋  Today's Prayer Log"},
+    "log_streak":           {"id": "{} hari berturut-turut",  "en": "{} day streak"},
+    "log_done":             {"id": "✓ Sudah",                 "en": "✓ Done"},
+    "log_pending":          {"id": "Belum",                   "en": "Pending"},
+    "log_reset":            {"id": "Reset",                   "en": "Reset"},
+
+    # ── Quran verse search ────────────────────────────────────────────────────
+    "quran_verse_search_ph": {"id": "Cari dalam surah ini...", "en": "Search in this surah..."},
+    "quran_search_results":  {"id": "{} ayat ditemukan",      "en": "{} verse(s) found"},
+    "quran_search_none":     {"id": "Tidak ditemukan",         "en": "Not found"},
+    "quran_search_clear":    {"id": "✕",                       "en": "✕"},
+
+    # ── Quran audio ───────────────────────────────────────────────────────────
+    "quran_reciter":         {"id": "Qari",                   "en": "Reciter"},
+    "quran_audio_loading":   {"id": "⌛",                      "en": "⌛"},
+    "quran_audio_error":     {"id": "⚠",                      "en": "⚠"},
+
     # ── Compass 16-point directions ───────────────────────────────────────────
     "compass_N":   {"id": "U",   "en": "N"},
     "compass_NNE": {"id": "UTL", "en": "NNE"},

@@ -5,7 +5,8 @@ import json
 import threading
 from pathlib import Path
 
-from PyQt6.QtCore import Qt, pyqtSignal, QObject
+from PyQt6.QtCore import Qt, pyqtSignal, QObject, QUrl
+from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                               QFrame, QPushButton, QScrollArea, QComboBox,
                               QLineEdit, QSizePolicy)
@@ -15,7 +16,20 @@ from ..widgets import VerseNumberBadge
 from ...i18n import t, get_language
 
 _CACHE_DIR      = Path.home() / ".muslim_desk" / "quran"
+_AUDIO_CACHE_DIR = _CACHE_DIR / "audio"
 _STATE_FILE     = _CACHE_DIR / "state.json"
+
+# Precompute global ayah offset for each surah (1-indexed → 0-based index)
+_GLOBAL_OFFSET: list[int] = []
+_total_ayahs = 0
+
+_RECITERS = [
+    ("Mishary Rashid Alafasy", "ar.alafasy"),
+    ("Abdul Basit (Murattal)", "ar.abdulbasitmurattal"),
+    ("Saad Al-Ghamdi",         "ar.saadalghamdi"),
+    ("Yasser Al-Dosari",       "ar.yasseraldossary"),
+]
+_CDN_AUDIO = "https://cdn.islamic.network/quran/audio/128/{edition}/{num}.mp3"
 _BOOKMARKS_FILE = _CACHE_DIR / "bookmarks.json"
 
 # 114 surahs: (number, latin_name, arabic_name, ayah_count, has_bismillah)
@@ -82,24 +96,48 @@ _SURAHS = [
 _API_BASE = "https://api.alquran.cloud/v1/surah/{n}/editions/quran-uthmani,{tr}"
 _TR_EDITIONS = {"id": "id.indonesian", "en": "en.sahih"}
 
+# Build global ayah offset table (surah 1 starts at global ayah 1)
+for _s in _SURAHS:
+    _GLOBAL_OFFSET.append(_total_ayahs + 1)   # 1-indexed global start for this surah
+    _total_ayahs += _s[3]
+
 
 class _QuranSignal(QObject):
     loaded = pyqtSignal(list, list, bool)   # arabic_ayahs, id_ayahs, from_cache
     error  = pyqtSignal(str)
 
 
+class _AudioSignal(QObject):
+    ready = pyqtSignal(str, object)   # (cache_path, btn)
+    error = pyqtSignal(object)        # btn
+
+
 class QuranPage(QWidget):
     def __init__(self, main_win):
         super().__init__()
-        self._win          = main_win
+        self._win           = main_win
         self._current_surah = 1
         self._sig = _QuranSignal()
         self._sig.loaded.connect(self._on_loaded)
         self._sig.error.connect(self._on_error)
 
-        self._bookmarks: list[dict] = []   # [{"surah":int,"surah_name":str,"ayah":int,"preview":str}]
+        self._bookmarks: list[dict] = []
         self._bm_visible = False
         self._load_bookmarks()
+
+        # Verse tracking for search
+        self._verse_widgets: list[tuple[int, QWidget, str]] = []  # (num, widget, translation)
+
+        # Audio player
+        self._player     = QMediaPlayer(self)
+        self._audio_out  = QAudioOutput(self)
+        self._player.setAudioOutput(self._audio_out)
+        self._audio_out.setVolume(1.0)
+        self._playing_btn: QPushButton | None = None
+        self._audio_sig = _AudioSignal()
+        self._audio_sig.ready.connect(self._on_audio_ready)
+        self._audio_sig.error.connect(self._on_audio_error)
+        self._current_reciter = _RECITERS[0][1]   # default Alafasy
 
         self._build()
 
@@ -281,6 +319,43 @@ class QuranPage(QWidget):
             f"background: transparent; padding: 14px 0;"
         )
         root.addWidget(self._bismillah_lbl)
+
+        # ── Verse search bar + reciter selector
+        tools_row = QHBoxLayout()
+        tools_row.setSpacing(8)
+
+        self._verse_search = QLineEdit()
+        self._verse_search.setPlaceholderText(t("quran_verse_search_ph"))
+        self._verse_search.setMaximumWidth(260)
+        self._verse_search.textChanged.connect(self._filter_verses)
+        self._verse_search.setStyleSheet(
+            f"QLineEdit {{ background: {th.SURFACE_2}; border: 1px solid {th.BORDER};"
+            f" border-radius: 8px; color: {th.TEXT}; padding: 4px 10px; font-size: 12px; }}"
+            f"QLineEdit:focus {{ border-color: {th.ACCENT_DK}; }}"
+        )
+        tools_row.addWidget(self._verse_search)
+
+        self._search_result_lbl = QLabel("")
+        self._search_result_lbl.setStyleSheet(
+            f"font-size: 11px; color: {th.MUTED}; background: transparent;"
+        )
+        tools_row.addWidget(self._search_result_lbl)
+        tools_row.addStretch()
+
+        reciter_lbl = QLabel(t("quran_reciter") + ":")
+        reciter_lbl.setStyleSheet(f"font-size: 12px; color: {th.MUTED}; background: transparent;")
+        tools_row.addWidget(reciter_lbl)
+
+        self._reciter_combo = QComboBox()
+        self._reciter_combo.setFixedHeight(30)
+        for name, edition in _RECITERS:
+            self._reciter_combo.addItem(name, userData=edition)
+        self._reciter_combo.currentIndexChanged.connect(
+            lambda i: setattr(self, "_current_reciter", self._reciter_combo.itemData(i))
+        )
+        tools_row.addWidget(self._reciter_combo)
+
+        root.addLayout(tools_row)
 
         # ── Content: verse area + bookmark panel side by side
         content_row = QHBoxLayout()
@@ -643,13 +718,25 @@ class QuranPage(QWidget):
         self._cache_lbl.setText(t("quran_cached") if from_cache else "")
         self._clear_verses()
 
+        # Stop any playing audio
+        self._player.stop()
+        self._playing_btn = None
+
+        # Clear verse search
+        self._verse_search.blockSignals(True)
+        self._verse_search.clear()
+        self._verse_search.blockSignals(False)
+        self._search_result_lbl.setText("")
+
         info = _SURAHS[self._current_surah - 1]
         self._bismillah_lbl.setText(t("quran_bismillah") if info[4] else "")
 
         lang = get_language()
+        self._verse_widgets.clear()
         for i, (ar, tr) in enumerate(zip(arabic, indo), start=1):
             widget = self._make_verse_widget(i, ar, tr, lang, self._current_surah)
             self._verse_layout.addWidget(widget)
+            self._verse_widgets.append((i, widget, tr))
 
         self._verse_layout.addStretch()
         self._verse_scroll.verticalScrollBar().setValue(0)
@@ -661,10 +748,100 @@ class QuranPage(QWidget):
         self._cache_lbl.setText("")
 
     def _clear_verses(self):
+        self._verse_widgets.clear()
         while self._verse_layout.count():
             item = self._verse_layout.takeAt(0)
             if item.widget():
                 item.widget().deleteLater()
+
+    # ─── verse search ─────────────────────────────────────────────────────────
+
+    def _filter_verses(self, text: str):
+        text = text.strip().lower()
+        if not text:
+            for _, w, _ in self._verse_widgets:
+                w.setVisible(True)
+            self._search_result_lbl.setText("")
+            return
+        count = 0
+        for _, w, tr in self._verse_widgets:
+            match = text in tr.lower()
+            w.setVisible(match)
+            if match:
+                count += 1
+        if count:
+            self._search_result_lbl.setText(t("quran_search_results", count))
+        else:
+            self._search_result_lbl.setText(t("quran_search_none"))
+
+    # ─── audio ────────────────────────────────────────────────────────────────
+
+    def _play_verse(self, surah: int, ayah: int, btn: QPushButton):
+        # Stop currently playing if same button
+        if self._playing_btn is btn:
+            self._player.stop()
+            btn.setText("▶")
+            self._playing_btn = None
+            return
+
+        # Reset previous button
+        if self._playing_btn is not None:
+            self._playing_btn.setText("▶")
+
+        global_num = _GLOBAL_OFFSET[surah - 1] + ayah - 1
+        edition    = self._current_reciter
+        cache_file = _AUDIO_CACHE_DIR / edition / f"{global_num}.mp3"
+
+        self._playing_btn = btn
+        btn.setText(t("quran_audio_loading"))
+
+        if cache_file.exists():
+            self._on_audio_ready(str(cache_file), btn)
+        else:
+            url = _CDN_AUDIO.format(edition=edition, num=global_num)
+            threading.Thread(
+                target=self._download_audio,
+                args=(url, cache_file, btn),
+                daemon=True,
+            ).start()
+
+    def _download_audio(self, url: str, cache_file: Path, btn: QPushButton):
+        try:
+            import urllib.request
+            cache_file.parent.mkdir(parents=True, exist_ok=True)
+            urllib.request.urlretrieve(url, str(cache_file))
+            self._audio_sig.ready.emit(str(cache_file), btn)
+        except Exception:
+            self._audio_sig.error.emit(btn)
+
+    def _on_audio_ready(self, path: str, btn: QPushButton):
+        if self._playing_btn is not btn:
+            return  # user switched away
+        self._player.setSource(QUrl.fromLocalFile(path))
+        self._player.play()
+        btn.setText("⏹")
+        self._player.playbackStateChanged.connect(
+            lambda state, b=btn: self._on_playback_changed(state, b)
+        )
+
+    def _on_audio_error(self, btn: QPushButton):
+        if self._playing_btn is btn:
+            btn.setText(t("quran_audio_error"))
+            self._playing_btn = None
+
+    def _on_playback_changed(self, state, btn: QPushButton):
+        from PyQt6.QtMultimedia import QMediaPlayer as _MP
+        if state == _MP.PlaybackState.StoppedState:
+            try:
+                if btn and self._playing_btn is btn:
+                    btn.setText("▶")
+                    self._playing_btn = None
+            except RuntimeError:
+                pass
+            try:
+                self._player.playbackStateChanged.disconnect()
+            except Exception:
+                pass
 
     def _make_verse_widget(self, num: int, arabic: str, translation: str,
                            lang: str, surah: int) -> QFrame:
@@ -710,6 +887,20 @@ class QuranPage(QWidget):
                 self._toggle_bookmark(s, a, p, b)
         )
         ar_row.addWidget(bm_btn, 0, Qt.AlignmentFlag.AlignVCenter)
+        ar_row.addSpacing(4)
+
+        # Audio play button
+        play_btn = QPushButton("▶")
+        play_btn.setFixedSize(32, 32)
+        play_btn.setStyleSheet(
+            f"QPushButton {{ background: transparent; border: 1px solid {th.BORDER};"
+            f" border-radius: 8px; color: {th.ACCENT}; font-size: 13px; }}"
+            f"QPushButton:hover {{ background: {th.ACCENT_DK}22; border-color: {th.ACCENT_DK}; }}"
+        )
+        play_btn.clicked.connect(
+            lambda _, s=surah, a=num, b=play_btn: self._play_verse(s, a, b)
+        )
+        ar_row.addWidget(play_btn, 0, Qt.AlignmentFlag.AlignVCenter)
         lay.addLayout(ar_row)
 
         # ── Translation (indented to align with Arabic text, not badge)

@@ -226,6 +226,9 @@ class DashboardPage(QWidget):
 
         root.addLayout(cards_row)
 
+        # ── Prayer log
+        root.addWidget(self._build_log_card())
+
         # ── Bottom two-panel section
         bottom = QHBoxLayout()
         bottom.setSpacing(12)
@@ -238,6 +241,82 @@ class DashboardPage(QWidget):
         self._status.setStyleSheet(f"font-size: 11px; color: {th.MUTED}; background: transparent;")
         self._status.setAlignment(Qt.AlignmentFlag.AlignRight)
         root.addWidget(self._status)
+
+    # ─── prayer log card ─────────────────────────────────────────────────────
+
+    def _build_log_card(self) -> QFrame:
+        from ...core import prayer_log as pl
+        from ...i18n import t as _t, prayer_name as _pn
+        import src.core.prayer_calculator as _pc
+
+        card = QFrame()
+        card.setObjectName("Card")
+        lay = QHBoxLayout(card)
+        lay.setContentsMargins(16, 10, 16, 10)
+        lay.setSpacing(12)
+
+        title = QLabel(_t("log_title"))
+        title.setStyleSheet(
+            f"font-size: 12px; font-weight: 700; color: {th.MUTED}; background: transparent;"
+        )
+        lay.addWidget(title)
+
+        self._log_data = pl.load_today()
+        self._log_btns: dict[str, QPushButton] = {}
+
+        for name in pl.MAIN_PRAYERS:
+            color = th.PRAYER_COLORS[name]
+            label = _pn(name) or _pc.PRAYER_NAMES_ID.get(name, name)
+            btn = QPushButton(label)
+            btn.setFixedHeight(34)
+            btn.setCheckable(True)
+            btn.setChecked(self._log_data.get(name, False))
+            self._log_btns[name] = btn
+            self._apply_log_btn_style(btn, name, btn.isChecked())
+            btn.clicked.connect(lambda checked, n=name: self._on_log_toggle(n, checked))
+            lay.addWidget(btn)
+
+        lay.addStretch()
+
+        # Streak display
+        streak = pl.load_streak()
+        self._streak_lbl = QLabel("")
+        self._streak_lbl.setStyleSheet(
+            f"font-size: 12px; font-weight: 700; color: {th.ACCENT}; background: transparent;"
+        )
+        if streak > 0:
+            self._streak_lbl.setText(_t("log_streak", streak))
+        lay.addWidget(self._streak_lbl)
+
+        return card
+
+    def _apply_log_btn_style(self, btn: QPushButton, prayer: str, done: bool):
+        color = th.PRAYER_COLORS[prayer]
+        if done:
+            btn.setStyleSheet(
+                f"QPushButton {{ background: {color}22; border: 2px solid {color}; "
+                f"border-radius: 8px; color: {color}; font-size: 11px; font-weight: 700;"
+                f" padding: 0 10px; }}"
+            )
+        else:
+            btn.setStyleSheet(
+                f"QPushButton {{ background: transparent; border: 1px solid {th.BORDER}; "
+                f"border-radius: 8px; color: {th.MUTED}; font-size: 11px; padding: 0 10px; }}"
+                f"QPushButton:hover {{ border-color: {color}; color: {color}; }}"
+            )
+
+    def _on_log_toggle(self, prayer: str, checked: bool):
+        from ...core import prayer_log as pl
+        self._log_data[prayer] = checked
+        pl.save_today(self._log_data)
+        btn = self._log_btns[prayer]
+        self._apply_log_btn_style(btn, prayer, checked)
+        streak = pl.load_streak()
+        if streak > 0:
+            from ...i18n import t as _t
+            self._streak_lbl.setText(_t("log_streak", streak))
+        else:
+            self._streak_lbl.setText("")
 
     # ─── refresh ─────────────────────────────────────────────────────────────
 

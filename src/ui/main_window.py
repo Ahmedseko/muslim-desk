@@ -4,10 +4,10 @@ from __future__ import annotations
 import threading
 from datetime import datetime, timedelta
 
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QObject
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QObject, QPropertyAnimation, QEasingCurve
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QHBoxLayout, QVBoxLayout,
                               QLabel, QFrame, QStackedWidget, QSystemTrayIcon,
-                              QMenu, QApplication, QPushButton)
+                              QMenu, QApplication, QPushButton, QGraphicsOpacityEffect)
 from PyQt6.QtGui import QAction
 
 from . import theme as th
@@ -16,6 +16,7 @@ from .pages.dashboard import DashboardPage
 from .pages.qibla_page import QiblaPage
 from .pages.settings_page import SettingsPage
 from .pages.dzikir_page import DzikirPage
+from .pages.doa_page import DoaPage
 from .pages.quran_page import QuranPage
 from ..data.settings_manager import Settings, save as save_settings
 from ..core.notification_manager import NotificationManager, PrayerAlertDialog
@@ -28,6 +29,7 @@ _MENU_DEF = [
     ("🕌", "nav_dashboard",  "Dashboard"),
     ("🧭", "nav_qibla",      "Qibla"),
     ("📿", "nav_dzikir",     "Dzikir"),
+    ("🤲", "nav_doa",        "Doa"),
     ("📖", "nav_quran",      "Quran"),
     ("⚙️", "nav_settings",   "Settings"),
 ]
@@ -197,12 +199,14 @@ class MainWindow(QMainWindow):
         self._qibla          = QiblaPage(self)
         self._settings_page  = SettingsPage(self)
         self._dzikir_page    = DzikirPage(self)
+        self._doa_page       = DoaPage(self)
         self._quran_page     = QuranPage(self)
 
         for key, page in (
             ("Dashboard", self._dash),
             ("Qibla",     self._qibla),
             ("Dzikir",    self._dzikir_page),
+            ("Doa",       self._doa_page),
             ("Quran",     self._quran_page),
             ("Settings",  self._settings_page),
         ):
@@ -241,7 +245,44 @@ class MainWindow(QMainWindow):
             return
         if hasattr(page, "refresh"):
             page.refresh()
-        self.stack.setCurrentWidget(page)
+
+        old_page = self.stack.currentWidget()
+        if old_page is page:
+            return
+
+        # Fade out old page then fade in new page
+        fx_out = QGraphicsOpacityEffect(old_page)
+        old_page.setGraphicsEffect(fx_out)
+        anim_out = QPropertyAnimation(fx_out, b"opacity", self)
+        anim_out.setDuration(80)
+        anim_out.setStartValue(1.0)
+        anim_out.setEndValue(0.0)
+        anim_out.setEasingCurve(QEasingCurve.Type.OutQuad)
+
+        def _switch():
+            try:
+                old_page.setGraphicsEffect(None)
+            except RuntimeError:
+                pass
+            self.stack.setCurrentWidget(page)
+            fx_in = QGraphicsOpacityEffect(page)
+            page.setGraphicsEffect(fx_in)
+            anim_in = QPropertyAnimation(fx_in, b"opacity", self)
+            anim_in.setDuration(140)
+            anim_in.setStartValue(0.0)
+            anim_in.setEndValue(1.0)
+            anim_in.setEasingCurve(QEasingCurve.Type.InQuad)
+            anim_in.finished.connect(lambda: _clear_fx(page))
+            anim_in.start(QPropertyAnimation.DeletionPolicy.DeleteWhenStopped)
+
+        def _clear_fx(p):
+            try:
+                p.setGraphicsEffect(None)
+            except RuntimeError:
+                pass
+
+        anim_out.finished.connect(_switch)
+        anim_out.start(QPropertyAnimation.DeletionPolicy.DeleteWhenStopped)
 
     def navigate(self, key: str):
         self._on_nav(key)
