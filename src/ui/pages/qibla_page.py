@@ -7,7 +7,7 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame)
 from ..widgets import QiblaCompass
 from .. import theme as th
 from ...core.qibla_calculator import qibla_bearing, distance_to_mecca_km
-from ...i18n import t, compass_dir as _compass_dir
+from ...i18n import t, get_language, compass_dir as _compass_dir
 
 
 class QiblaPage(QWidget):
@@ -75,14 +75,14 @@ class QiblaPage(QWidget):
         leg = QHBoxLayout()
         leg.setAlignment(Qt.AlignmentFlag.AlignCenter)
         leg.setSpacing(16)
-        for color, text in (("#ef4444", "● Utara (N)"), (th.ACCENT_DK, "● Kiblat")):
-            ll = QLabel(text)
+        for color, key in (("#ef4444", "compass_north_lbl"), (th.ACCENT_DK, "compass_qibla_lbl")):
+            ll = QLabel(t(key))
             ll.setStyleSheet(f"color: {color}; font-size: 11px; background: transparent;")
             leg.addWidget(ll)
         cl.addLayout(leg)
 
         # Static-compass note
-        warn = QLabel("🧭 Kompas statis — arahkan laptop ke Utara")
+        warn = QLabel(t("qibla_compass_static"))
         warn.setStyleSheet(
             f"color: {th.WARN}; font-size: 11px; background: transparent; padding-top: 4px;"
         )
@@ -205,7 +205,7 @@ class QiblaPage(QWidget):
         vl.setContentsMargins(18, 14, 18, 14)
         vl.setSpacing(10)
 
-        hdr = QLabel("📜  Dalil Tentang Kiblat")
+        hdr = QLabel(t("qibla_dalil_title"))
         hdr.setStyleSheet(
             f"font-size: 13px; font-weight: 700; color: {th.HEADING}; background: transparent;"
         )
@@ -233,11 +233,7 @@ class QiblaPage(QWidget):
         ayat_ar.setWordWrap(True)
         vl.addWidget(ayat_ar)
 
-        ayat_tr = QLabel(
-            "“Sungguh Kami melihat wajahmu sering menengadah ke langit, maka Kami akan "
-            "memalingkanmu ke kiblat yang kamu sukai. Palingkanlah wajahmu ke arah Masjidil Haram. "
-            "Dan di mana saja kamu berada, palingkanlah wajahmu ke arah itu.”"
-        )
+        ayat_tr = QLabel(t("qibla_ayat_tr"))
         ayat_tr.setStyleSheet(
             f"font-size: 11px; color: {th.MUTED}; background: transparent; font-style: italic;"
         )
@@ -262,15 +258,13 @@ class QiblaPage(QWidget):
         hadith_ar.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         vl.addWidget(hadith_ar)
 
-        hadith_tr = QLabel(
-            "“Apa yang ada di antara timur dan barat adalah kiblat.”"
-        )
+        hadith_tr = QLabel(t("qibla_hadith_tr"))
         hadith_tr.setStyleSheet(
             f"font-size: 11px; color: {th.MUTED}; background: transparent; font-style: italic;"
         )
         vl.addWidget(hadith_tr)
 
-        ref2 = QLabel("📖  HR. Muslim no. 537 · Dari Abu Hurairah RA")
+        ref2 = QLabel(t("qibla_hadith_ref"))
         ref2.setStyleSheet(
             f"font-size: 11px; font-weight: 700; color: {th.ACCENT_DK}; background: transparent;"
         )
@@ -321,7 +315,7 @@ class QiblaPage(QWidget):
 
         self._compass.set_bearing(bearing)
         self._bearing_lbl.setText(f"{bearing:.1f}°")
-        self._dir_dist_lbl.setText(f"{dir_label}  ·  {dist:,.0f} km dari Mekkah")
+        self._dir_dist_lbl.setText(f"{dir_label}  ·  {dist:,.0f} km {t('qibla_from_mecca')}")
 
         self._loc_city.setText(f"{s.city}, {s.country}")
         self._loc_lat.setText(f"Lat {lat:.4f}°")
@@ -333,12 +327,24 @@ class QiblaPage(QWidget):
 
         muted = th.MUTED
         accent = th.ACCENT
-        self._steps_lbl.setText(
-            f"<b>1.</b> Cari arah Utara menggunakan kompas HP atau Google Maps.<br>"
-            f"<b>2.</b> Hadapkan laptop/badan ke arah <b>Utara (N)</b>.<br>"
-            f"<b>3.</b> Dari Utara, putar <b style='color:{accent}'>{b_int}° searah jarum jam</b>"
-            f" &nbsp;≈ arah <b>{dir_label}</b>.<br>"
-            f"<b>4.</b> Arah yang dihadapi = <b>Kiblat</b> ✅<br>"
-            f"<br><span style='color:{muted}; font-size:11px;'>"
-            f"💡 Untuk akurasi lebih tinggi, gunakan kompas HP dengan sudut {b_int}° dari Utara.</span>"
-        )
+        lang = get_language()
+        if lang == "en":
+            self._steps_lbl.setText(
+                f"<b>1.</b> Find North using your phone's compass or Google Maps.<br>"
+                f"<b>2.</b> Face your laptop/body toward <b>North (N)</b>.<br>"
+                f"<b>3.</b> From North, rotate <b style='color:{accent}'>{b_int}° clockwise</b>"
+                f" &nbsp;≈ direction <b>{dir_label}</b>.<br>"
+                f"<b>4.</b> The direction you face = <b>Qibla</b> ✅<br>"
+                f"<br><span style='color:{muted}; font-size:11px;'>"
+                f"💡 For higher accuracy, use your phone's compass at {b_int}° from North.</span>"
+            )
+        else:
+            self._steps_lbl.setText(
+                f"<b>1.</b> Cari arah Utara menggunakan kompas HP atau Google Maps.<br>"
+                f"<b>2.</b> Hadapkan laptop/badan ke arah <b>Utara (N)</b>.<br>"
+                f"<b>3.</b> Dari Utara, putar <b style='color:{accent}'>{b_int}° searah jarum jam</b>"
+                f" &nbsp;≈ arah <b>{dir_label}</b>.<br>"
+                f"<b>4.</b> Arah yang dihadapi = <b>Kiblat</b> ✅<br>"
+                f"<br><span style='color:{muted}; font-size:11px;'>"
+                f"💡 Untuk akurasi lebih tinggi, gunakan kompas HP dengan sudut {b_int}° dari Utara.</span>"
+            )

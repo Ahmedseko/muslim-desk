@@ -78,7 +78,8 @@ _SURAHS = [
     (113,"Al-Falaq","الفلق",5,True),(114,"An-Nas","الناس",6,True),
 ]
 
-_API_URL = "https://api.alquran.cloud/v1/surah/{n}/editions/quran-uthmani,id.indonesian"
+_API_BASE = "https://api.alquran.cloud/v1/surah/{n}/editions/quran-uthmani,{tr}"
+_TR_EDITIONS = {"id": "id.indonesian", "en": "en.sahih"}
 
 
 class _QuranSignal(QObject):
@@ -590,42 +591,46 @@ class QuranPage(QWidget):
         ).start()
 
     def _fetch_thread(self, num: int, force: bool):
-        cache_path = _CACHE_DIR / f"{num}.json"
+        lang       = get_language()
+        tr_edition = _TR_EDITIONS.get(lang, "en.sahih")
+        cache_path = _CACHE_DIR / f"{num}_{lang}.json"
+
         if not force and cache_path.exists():
             try:
                 data   = json.loads(cache_path.read_text(encoding="utf-8"))
                 arabic = data["arabic"]
-                indo   = data["indo"]
-                self._sig.loaded.emit(arabic, indo, True)
+                trans  = data["trans"]
+                self._sig.loaded.emit(arabic, trans, True)
                 return
             except Exception:
                 pass
 
         try:
             import requests
-            r = requests.get(_API_URL.format(n=num), timeout=15)
+            url = _API_BASE.format(n=num, tr=tr_edition)
+            r = requests.get(url, timeout=15)
             r.raise_for_status()
             body      = r.json()
             editions  = body["data"]
-            arabic_ed = next((e for e in editions if "uthmani"    in e["edition"]["identifier"]), None)
-            indo_ed   = next((e for e in editions if "indonesian" in e["edition"]["identifier"]), None)
-            if not arabic_ed or not indo_ed:
+            arabic_ed = next((e for e in editions if "uthmani" in e["edition"]["identifier"]), None)
+            trans_ed  = next((e for e in editions if e["edition"]["identifier"] == tr_edition), None)
+            if not arabic_ed or not trans_ed:
                 self._sig.error.emit(t("quran_offline"))
                 return
 
             arabic = [a["text"] for a in arabic_ed["ayahs"]]
-            indo   = [a["text"] for a in indo_ed["ayahs"]]
+            trans  = [a["text"] for a in trans_ed["ayahs"]]
 
             try:
                 _CACHE_DIR.mkdir(parents=True, exist_ok=True)
                 cache_path.write_text(
-                    json.dumps({"arabic": arabic, "indo": indo}, ensure_ascii=False),
+                    json.dumps({"arabic": arabic, "trans": trans}, ensure_ascii=False),
                     encoding="utf-8",
                 )
             except Exception:
                 pass
 
-            self._sig.loaded.emit(arabic, indo, False)
+            self._sig.loaded.emit(arabic, trans, False)
         except Exception:
             self._sig.error.emit(t("quran_offline"))
 
@@ -680,10 +685,15 @@ class QuranPage(QWidget):
         badge.setFixedSize(40, 40)
         badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
         badge.setStyleSheet(
-            "background: qlineargradient(x1:0,y1:0,x2:1,y2:1,"
-            "stop:0 #fb923c,stop:1 #c2410c);"
-            "border-radius: 20px; color: #ffffff;"
-            "font-size: 12px; font-weight: 800; border: none;"
+            "QLabel {"
+            "  background: qlineargradient(x1:0,y1:0,x2:1,y2:1,"
+            "    stop:0 #fb923c, stop:1 #c2410c);"
+            "  border-radius: 20px;"
+            "  color: #ffffff;"
+            "  font-size: 12px;"
+            "  font-weight: 800;"
+            "  border: none;"
+            "}"
         )
         ar_row.addWidget(badge, 0, Qt.AlignmentFlag.AlignVCenter)
         ar_row.addSpacing(18)

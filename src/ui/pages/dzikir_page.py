@@ -19,6 +19,7 @@ _POST_PRAYER = [
         "meaning_id": "Maha Suci Allah",
         "meaning_en": "Glory be to Allah",
         "count": 33,
+        "ref": "HR. Muslim no. 595 · Abu Hurairah RA",
     },
     {
         "arabic": "اَلْحَمْدُ لِلّٰهِ",
@@ -26,6 +27,7 @@ _POST_PRAYER = [
         "meaning_id": "Segala puji bagi Allah",
         "meaning_en": "All praise is for Allah",
         "count": 33,
+        "ref": "HR. Muslim no. 595 · Abu Hurairah RA",
     },
     {
         "arabic": "اَللّٰهُ أَكْبَرُ",
@@ -33,6 +35,7 @@ _POST_PRAYER = [
         "meaning_id": "Allah Maha Besar",
         "meaning_en": "Allah is the Greatest",
         "count": 33,
+        "ref": "HR. Muslim no. 595 · Abu Hurairah RA",
     },
     {
         "arabic": "لَا إِلٰهَ إِلَّا اللّٰهُ وَحْدَهُ لَا شَرِيكَ لَهُ، لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ وَهُوَ عَلَى كُلِّ شَيْءٍ قَدِيرٌ",
@@ -40,6 +43,7 @@ _POST_PRAYER = [
         "meaning_id": "Tiada Tuhan selain Allah, tiada sekutu bagi-Nya. Bagi-Nya kerajaan dan segala pujian. Dia Mahakuasa atas segala sesuatu.",
         "meaning_en": "None has the right to be worshipped but Allah alone, Who has no partner. His is the dominion, His is the praise, and He is able to do all things.",
         "count": 1,
+        "ref": "HR. Muslim no. 596 · Abu Hurairah RA",
     },
 ]
 
@@ -50,6 +54,7 @@ _MORNING = [
         "meaning_id": "Ayat Kursi — perlindungan dari gangguan setan",
         "meaning_en": "Ayat al-Kursi — protection from shaytan",
         "count": 1,
+        "ref": "HR. Bukhari no. 2311 · Abu Hurairah RA",
     },
     {
         "arabic": "أَصْبَحْنَا وَأَصْبَحَ الْمُلْكُ لِلّٰهِ، وَالْحَمْدُ لِلّٰهِ، لَا إِلٰهَ إِلَّا اللّٰهُ وَحْدَهُ لَا شَرِيكَ لَهُ",
@@ -57,6 +62,7 @@ _MORNING = [
         "meaning_id": "Kami berpagi hari dan kerajaan hanyalah milik Allah...",
         "meaning_en": "We have entered the morning and the dominion belongs to Allah...",
         "count": 1,
+        "ref": "HR. Abu Dawud no. 5068 · Abdullah ibn Mas'ud RA",
     },
     {
         "arabic": "سُبْحَانَ اللّٰهِ وَبِحَمْدِهِ",
@@ -64,6 +70,7 @@ _MORNING = [
         "meaning_id": "Maha Suci Allah dan segala puji bagi-Nya",
         "meaning_en": "Glory be to Allah and His is the praise",
         "count": 100,
+        "ref": "HR. Bukhari no. 6405 · Muslim no. 2691 · Abu Hurairah RA",
     },
     {
         "arabic": "أَسْتَغْفِرُ اللّٰهَ",
@@ -71,6 +78,7 @@ _MORNING = [
         "meaning_id": "Aku memohon ampunan kepada Allah",
         "meaning_en": "I seek forgiveness from Allah",
         "count": 100,
+        "ref": "HR. Bukhari no. 6307 · Muslim no. 2702 · Abu Hurairah RA",
     },
     {
         "arabic": "لَا إِلٰهَ إِلَّا اللّٰهُ وَحْدَهُ لَا شَرِيكَ لَهُ، لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ وَهُوَ عَلَى كُلِّ شَيْءٍ قَدِيرٌ",
@@ -78,6 +86,7 @@ _MORNING = [
         "meaning_id": "Tiada Tuhan selain Allah, tiada sekutu bagi-Nya...",
         "meaning_en": "None has the right to be worshipped but Allah alone...",
         "count": 10,
+        "ref": "HR. Muslim no. 2693 · Abu Hurairah RA",
     },
 ]
 
@@ -88,6 +97,7 @@ _EVENING = [
         "meaning_id": "Kami bersore hari dan kerajaan hanyalah milik Allah...",
         "meaning_en": "We have entered the evening and the dominion belongs to Allah...",
         "count": 1,
+        "ref": "HR. Abu Dawud no. 5068 · Abdullah ibn Mas'ud RA",
     },
     {
         "arabic": "سُبْحَانَ اللّٰهِ وَبِحَمْدِهِ",
@@ -95,6 +105,7 @@ _EVENING = [
         "meaning_id": "Maha Suci Allah dan segala puji bagi-Nya",
         "meaning_en": "Glory be to Allah and His is the praise",
         "count": 100,
+        "ref": "HR. Bukhari no. 6405 · Muslim no. 2691 · Abu Hurairah RA",
     },
     {
         "arabic": "أَعُوذُ بِكَلِمَاتِ اللّٰهِ التَّامَّاتِ مِنْ شَرِّ مَا خَلَقَ",
@@ -102,6 +113,7 @@ _EVENING = [
         "meaning_id": "Aku berlindung dengan kalimat-kalimat Allah yang sempurna dari kejahatan makhluk-Nya",
         "meaning_en": "I seek refuge in the Perfect Words of Allah from the evil of what He has created",
         "count": 3,
+        "ref": "HR. Muslim no. 2708 · Abu Hurairah RA",
     },
     {
         "arabic": "اَللّٰهُمَّ بِكَ أَمْسَيْنَا وَبِكَ أَصْبَحْنَا وَبِكَ نَحْيَا وَبِكَ نَمُوتُ وَإِلَيْكَ الْمَصِيرُ",
@@ -109,6 +121,7 @@ _EVENING = [
         "meaning_id": "Ya Allah, dengan-Mu kami bersore hari, dengan-Mu kami berpagi hari...",
         "meaning_en": "O Allah, by You we enter the evening, by You we enter the morning...",
         "count": 1,
+        "ref": "HR. Abu Dawud no. 5068 · Tirmidhi no. 3391 · Abu Hurairah RA",
     },
 ]
 
@@ -206,6 +219,16 @@ class DzikirPage(QWidget):
             lbl_meaning.setStyleSheet(f"font-size: 13px; color: {th.TEXT}; background: transparent;")
             lbl_meaning.setWordWrap(True)
             lay.addWidget(lbl_meaning)
+
+        # Hadith reference
+        ref = item.get("ref", "")
+        if ref:
+            lbl_ref = QLabel(f"📖  {ref}")
+            lbl_ref.setStyleSheet(
+                f"font-size: 11px; color: {th.ACCENT_DK}; font-weight: 600; background: transparent;"
+            )
+            lbl_ref.setWordWrap(True)
+            lay.addWidget(lbl_ref)
 
         # Separator
         sep = QFrame()

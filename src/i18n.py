@@ -237,6 +237,27 @@ _STRINGS: dict[str, dict[str, str]] = {
                "<span style='color: #8b949e; font-size: 12px;'>"
                "💡 For real-time accuracy, use your phone's compass with this app's bearing.</span>"),
     },
+    "qibla_compass_static": {"id": "🧭 Kompas statis — arahkan laptop ke Utara",
+                              "en": "🧭 Static compass — point your laptop North"},
+    "qibla_dalil_title":    {"id": "📜  Dalil Tentang Kiblat",
+                              "en": "📜  Quranic Evidence on Qibla"},
+    "qibla_from_mecca":     {"id": "dari Mekkah", "en": "from Mecca"},
+    "qibla_ayat_tr": {
+        "id": ("“Sungguh Kami melihat wajahmu sering menengadah ke langit, maka Kami akan "
+               "memalingkanmu ke kiblat yang kamu sukai. Palingkanlah wajahmu ke arah Masjidil Haram. "
+               "Dan di mana saja kamu berada, palingkanlah wajahmu ke arah itu.”"),
+        "en": ("“Indeed, We see the turning of your face toward the heaven, and We will surely "
+               "turn you to a qibla with which you will be pleased. So turn your face toward "
+               "al-Masjid al-Haram. And wherever you [believers] are, turn your faces toward it.”"),
+    },
+    "qibla_hadith_tr": {
+        "id": "“Apa yang ada di antara timur dan barat adalah kiblat.”",
+        "en": "“What is between the east and the west is the qibla.”",
+    },
+    "qibla_hadith_ref": {
+        "id": "📖  HR. Muslim no. 537 · Dari Abu Hurairah RA",
+        "en": "📖  HR. Muslim no. 537 · Narrated by Abu Hurairah RA",
+    },
 
     # ── Font size (#3) ───────────────────────────────────────────────────────
     "lbl_font_size":    {"id": "Ukuran Teks",           "en": "Font Size"},
