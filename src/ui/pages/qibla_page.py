@@ -121,8 +121,11 @@ class QiblaPage(QWidget):
         kl.addWidget(info, 1)
         col.addWidget(kaaba)
 
-        # Row 3: Steps guide
-        col.addWidget(self._build_steps_card(), 1)
+        # Row 3: Dalil (Quran + Hadith)
+        col.addWidget(self._build_hadith_card(), 1)
+
+        # Row 4: Steps guide
+        col.addWidget(self._build_steps_card())
 
         return col
 
@@ -195,6 +198,87 @@ class QiblaPage(QWidget):
 
         return card
 
+    def _build_hadith_card(self) -> QFrame:
+        card = QFrame()
+        card.setObjectName("Card")
+        vl = QVBoxLayout(card)
+        vl.setContentsMargins(18, 14, 18, 14)
+        vl.setSpacing(10)
+
+        hdr = QLabel("📜  Dalil Tentang Kiblat")
+        hdr.setStyleSheet(
+            f"font-size: 13px; font-weight: 700; color: {th.HEADING}; background: transparent;"
+        )
+        vl.addWidget(hdr)
+
+        def _sep():
+            s = QFrame()
+            s.setFixedHeight(1)
+            s.setStyleSheet(f"background: {th.BORDER};")
+            return s
+
+        vl.addWidget(_sep())
+
+        # ── QS. Al-Baqarah: 144
+        ayat_ar = QLabel(
+            "قَدۡ نَرَىٰ تَقَلُّبَ وَجۡهِكَ فِي ٱلسَّمَاۤءِ ۖ فَلَنُوَلِّيَنَّكَ قِبۡلَةً تَرۡضَاهَا ۚ"
+            " فَوَلِّ وَجۡهَكَ شَطۡرَ ٱلۡمَسۡجِدِ ٱلۡحَرَامِ ۚ وَحَيۡثُ مَا كُنتُمۡ فَوَلُّوا۟ وُجُوهَكُمۡ شَطۡرَهُۥ"
+        )
+        ayat_ar.setStyleSheet(
+            f"font-size: 16px; color: {th.ACCENT}; background: transparent;"
+            f"font-family: 'Traditional Arabic', 'Scheherazade New', 'Amiri', serif;"
+        )
+        ayat_ar.setAlignment(Qt.AlignmentFlag.AlignRight)
+        ayat_ar.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        ayat_ar.setWordWrap(True)
+        vl.addWidget(ayat_ar)
+
+        ayat_tr = QLabel(
+            "“Sungguh Kami melihat wajahmu sering menengadah ke langit, maka Kami akan "
+            "memalingkanmu ke kiblat yang kamu sukai. Palingkanlah wajahmu ke arah Masjidil Haram. "
+            "Dan di mana saja kamu berada, palingkanlah wajahmu ke arah itu.”"
+        )
+        ayat_tr.setStyleSheet(
+            f"font-size: 11px; color: {th.MUTED}; background: transparent; font-style: italic;"
+        )
+        ayat_tr.setWordWrap(True)
+        vl.addWidget(ayat_tr)
+
+        ref1 = QLabel("📖  QS. Al-Baqarah: 144")
+        ref1.setStyleSheet(
+            f"font-size: 11px; font-weight: 700; color: {th.ACCENT_DK}; background: transparent;"
+        )
+        vl.addWidget(ref1)
+
+        vl.addWidget(_sep())
+
+        # ── HR. Muslim no. 537
+        hadith_ar = QLabel("مَا بَيْنَ الْمَشْرِقِ وَالْمَغْرِبِ قِبْلَةٌ")
+        hadith_ar.setStyleSheet(
+            f"font-size: 16px; color: {th.ACCENT}; background: transparent;"
+            f"font-family: 'Traditional Arabic', 'Scheherazade New', 'Amiri', serif;"
+        )
+        hadith_ar.setAlignment(Qt.AlignmentFlag.AlignRight)
+        hadith_ar.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        vl.addWidget(hadith_ar)
+
+        hadith_tr = QLabel(
+            "“Apa yang ada di antara timur dan barat adalah kiblat.”"
+        )
+        hadith_tr.setStyleSheet(
+            f"font-size: 11px; color: {th.MUTED}; background: transparent; font-style: italic;"
+        )
+        vl.addWidget(hadith_tr)
+
+        ref2 = QLabel("📖  HR. Muslim no. 537 · Dari Abu Hurairah RA")
+        ref2.setStyleSheet(
+            f"font-size: 11px; font-weight: 700; color: {th.ACCENT_DK}; background: transparent;"
+        )
+        vl.addWidget(ref2)
+
+        vl.addStretch(1)
+        return card
+
     def _build_steps_card(self) -> QFrame:
         card = QFrame()
         card.setObjectName("Card")
@@ -219,7 +303,9 @@ class QiblaPage(QWidget):
         )
         self._steps_lbl.setWordWrap(True)
         self._steps_lbl.setTextFormat(Qt.TextFormat.RichText)
+        self._steps_lbl.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
         vl.addWidget(self._steps_lbl)
+        vl.addStretch(1)
 
         return card
 
