@@ -459,9 +459,9 @@ class SettingsPage(QWidget):
             (t("about_geo"),         "ip-api.com",            ""),
             (t("about_fw"),          "PyQt6 (Python)",        ""),
             (t("about_quran_data"),  "alquran.cloud API",     ""),
-            (t("about_audio_fajr"),  "Syekh Mishary Rashid Al-Afasy (Adzan Subuh)",
+            (t("about_audio_fajr"),  "Adzan Subuh - Mishary Rashid",
              "https://www.youtube.com/watch?v=qhp3gy2rDUU"),
-            (t("about_audio_other"), "Syekh Umar Al-Faruq (Adzan Dzuhur–Isya)",
+            (t("about_audio_other"), "Adzan - Umar Al Faruq",
              "https://www.youtube.com/watch?v=18r6pTlgFKs"),
             (t("about_audio_edit"),  "Audacity",              ""),
         ]
