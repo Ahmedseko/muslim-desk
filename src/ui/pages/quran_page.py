@@ -11,9 +11,12 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                               QFrame, QPushButton, QScrollArea, QComboBox,
                               QLineEdit, QSizePolicy)
 
+from PyQt6.QtCore import QTimer
+
 from .. import theme as th
 from ..widgets import VerseNumberBadge, AudioPlayButton
 from ...i18n import t, get_language
+from ...core.smtc import SMTCManager
 
 _CACHE_DIR      = Path.home() / ".muslim_desk" / "quran"
 _AUDIO_CACHE_DIR = _CACHE_DIR / "audio"
@@ -136,11 +139,18 @@ class QuranPage(QWidget):
         self._playing_btn = None
         self._playing_ayah: int = 0
         self._playing_surah_audio: int = 0
+        self._auto_play_on_load: bool = False
         self._audio_sig = _AudioSignal()
         self._audio_sig.ready.connect(self._on_audio_ready)
         self._audio_sig.error.connect(self._on_audio_error)
         self._player.playbackStateChanged.connect(self._on_playback_state_changed)
         self._current_reciter = _RECITERS[0][1]   # default Alafasy
+
+        # Windows SMTC (lock screen media controls)
+        self._smtc = SMTCManager(self)
+        self._smtc.play_pause_toggled.connect(self._on_smtc_play_pause)
+        self._smtc.next_requested.connect(self._on_smtc_next)
+        self._smtc.prev_requested.connect(self._on_smtc_prev)
 
         self._build()
 
@@ -744,6 +754,10 @@ class QuranPage(QWidget):
         self._verse_layout.addStretch()
         self._verse_scroll.verticalScrollBar().setValue(0)
 
+        if self._auto_play_on_load:
+            self._auto_play_on_load = False
+            QTimer.singleShot(300, self._auto_play_first_ayah)
+
     def _on_error(self, msg: str):
         self._status_lbl.setText(msg)
         self._status_lbl.show()
@@ -827,11 +841,16 @@ class QuranPage(QWidget):
         self._player.play()
         btn.set_playing(True)
         self._scroll_to_ayah(self._playing_ayah)
+        # Update Windows lock screen media info
+        surah_name = _SURAHS[self._playing_surah_audio - 1][1]
+        reciter = next((n for n, e in _RECITERS if e == self._current_reciter), self._current_reciter)
+        self._smtc.update_playing(surah_name, self._playing_ayah, reciter)
 
     def _on_audio_error(self, btn):
         if self._playing_btn is btn:
             btn.set_playing(False)
             self._playing_btn = None
+            self._smtc.update_stopped()
 
     def _on_playback_state_changed(self, state):
         from PyQt6.QtMultimedia import QMediaPlayer as _MP
@@ -859,14 +878,58 @@ class QuranPage(QWidget):
         if surah != self._current_surah:
             return
         total = _SURAHS[surah - 1][3]
-        if next_ayah > total:
-            return
-        for num, widget, _ in self._verse_widgets:
-            if num == next_ayah and widget.isVisible():
-                play_btn = widget.findChild(AudioPlayButton)
-                if play_btn:
-                    self._play_verse(surah, next_ayah, play_btn)
-                break
+        if next_ayah <= total:
+            # Same surah — next ayah
+            for num, widget, _ in self._verse_widgets:
+                if num == next_ayah and widget.isVisible():
+                    play_btn = widget.findChild(AudioPlayButton)
+                    if play_btn:
+                        self._play_verse(surah, next_ayah, play_btn)
+                    break
+        elif surah < 114:
+            # End of surah — load next surah and auto-play from ayah 1
+            self._auto_play_on_load = True
+            self._load_surah(surah + 1)
+        else:
+            self._smtc.update_stopped()
+
+    def _auto_play_first_ayah(self):
+        if self._verse_widgets:
+            num, widget, _ = self._verse_widgets[0]
+            play_btn = widget.findChild(AudioPlayButton)
+            if play_btn:
+                self._play_verse(self._current_surah, num, play_btn)
+
+    # ── SMTC media key handlers ───────────────────────────────────────────────
+
+    def _on_smtc_play_pause(self):
+        if self._playing_btn is not None:
+            self._playing_btn.click()
+        else:
+            self._auto_play_first_ayah()
+
+    def _on_smtc_next(self):
+        if self._playing_surah_audio and self._playing_ayah:
+            saved_btn = self._playing_btn
+            self._playing_btn = None   # prevent auto-advance loop
+            if saved_btn:
+                saved_btn.set_playing(False)
+            self._auto_advance()
+
+    def _on_smtc_prev(self):
+        prev_ayah = self._playing_ayah - 1
+        surah = self._playing_surah_audio
+        if prev_ayah >= 1 and surah == self._current_surah:
+            for num, widget, _ in self._verse_widgets:
+                if num == prev_ayah and widget.isVisible():
+                    play_btn = widget.findChild(AudioPlayButton)
+                    if play_btn:
+                        if self._playing_btn:
+                            self._playing_btn.set_playing(False)
+                        self._playing_btn = None
+                        self._playing_ayah = prev_ayah
+                        self._play_verse(surah, prev_ayah, play_btn)
+                    break
 
     def _make_verse_widget(self, num: int, arabic: str, translation: str,
                            lang: str, surah: int) -> QFrame:

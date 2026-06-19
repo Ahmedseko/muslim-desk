@@ -5,3 +5,7 @@ hijri-converter>=2.3
 timezonefinder>=6.0
 tzdata>=2024.1
 winotify>=0.9
+winrt-Windows.Media>=3.2
+winrt-Windows.Media.Core>=3.2
+winrt-Windows.Media.Playback>=3.2
+winrt-Windows.Storage.Streams>=3.2
