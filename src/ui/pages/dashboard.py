@@ -62,8 +62,8 @@ class DashboardPage(QWidget):
 
     def _build(self):
         root = QVBoxLayout(self)
-        root.setContentsMargins(28, 20, 28, 20)
-        root.setSpacing(16)
+        root.setContentsMargins(28, 16, 28, 8)
+        root.setSpacing(10)
 
         # ── Top header row
         header_row = QHBoxLayout()
@@ -236,10 +236,14 @@ class DashboardPage(QWidget):
         bottom.addWidget(self._build_hijri_card(),  45)
         root.addLayout(bottom, 1)
 
-        # Status bar
+        # Status bar — hidden by default, shown briefly on activity
         self._status = QLabel("")
         self._status.setStyleSheet(f"font-size: 11px; color: {th.MUTED}; background: transparent;")
         self._status.setAlignment(Qt.AlignmentFlag.AlignRight)
+        self._status.setVisible(False)
+        self._status_timer = QTimer(self)
+        self._status_timer.setSingleShot(True)
+        self._status_timer.timeout.connect(lambda: self._status.setVisible(False))
         root.addWidget(self._status)
 
     # ─── prayer log card ─────────────────────────────────────────────────────
@@ -383,6 +387,8 @@ class DashboardPage(QWidget):
             self._today_times_date = today
         except Exception as e:
             self._status.setText(t("calc_failed") + str(e))
+            self._status.setVisible(True)
+            self._status_timer.start(5000)
             return
 
         # Update cards
@@ -560,6 +566,8 @@ class DashboardPage(QWidget):
         self._btn_refresh_loc.setText(t("detecting_loc"))
         self._btn_refresh_loc.setEnabled(False)
         self._status.setText(t("detecting_via_ip"))
+        self._status.setVisible(True)
+        self._status_timer.start(10000)
         threading.Thread(target=self._detect_thread, daemon=True).start()
 
     def _detect_thread(self):
@@ -582,6 +590,8 @@ class DashboardPage(QWidget):
         self._btn_refresh_loc.setText(t("refresh_location_btn"))
         self._btn_refresh_loc.setEnabled(True)
         self._status.setText(t("loc_updated") + loc.display_name())
+        self._status.setVisible(True)
+        self._status_timer.start(4000)
         self.refresh()
 
     # ─── alarm toggles ───────────────────────────────────────────────────────
