@@ -121,6 +121,7 @@ class PrayerAlertDialog(QDialog):
             | Qt.WindowType.WindowStaysOnTopHint
             | Qt.WindowType.FramelessWindowHint
         )
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setModal(False)
         self.setMinimumWidth(360)
         self._build(prayer_name_id, time_str)
@@ -128,16 +129,26 @@ class PrayerAlertDialog(QDialog):
     def _build(self, name_id: str, time_str: str):
         from src.ui import theme as th
         from src.i18n import t as _t
-        self.setStyleSheet(f"""
-            QDialog {{
+
+        # Outer layout is transparent — only the inner card has background
+        self.setStyleSheet("QDialog { background: transparent; }")
+
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(12, 12, 12, 12)  # shadow room
+        outer.setSpacing(0)
+
+        card = QFrame()
+        card.setStyleSheet(f"""
+            QFrame {{
                 background: {th.SURFACE};
                 border: 2px solid {th.ACCENT_DK};
                 border-radius: 16px;
             }}
             QLabel {{ background: transparent; color: {th.TEXT}; }}
         """)
+        outer.addWidget(card)
 
-        root = QVBoxLayout(self)
+        root = QVBoxLayout(card)
         root.setContentsMargins(28, 24, 28, 24)
         root.setSpacing(14)
 
