@@ -135,6 +135,7 @@ _STRINGS: dict[str, dict[str, str]] = {
     "loc_set_to":         {"id": "✅ Lokasi diset ke: ",           "en": "✅ Location set to: "},
 
     "sec_notif":          {"id": "🔔  Notifikasi & Alarm",         "en": "🔔  Notifications & Alarms"},
+    "btn_preview_notif":  {"id": "🔔 Preview Notifikasi & Suara",  "en": "🔔 Preview Notification & Sound"},
     "notif_cb":           {"id": "Aktifkan notifikasi waktu sholat", "en": "Enable prayer time notifications"},
     "sound_cb":           {"id": "Aktifkan suara adzan",           "en": "Enable adhan sound"},
     "lbl_sound_file":     {"id": "File suara (.wav)",              "en": "Sound file (.wav)"},

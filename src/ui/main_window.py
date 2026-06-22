@@ -368,7 +368,7 @@ class MainWindow(QMainWindow):
     def _fire_prayer_alert(self, prayer_en: str, time_str: str):
         name_id = i18n_prayer_name(prayer_en) or pc.PRAYER_NAMES_ID.get(prayer_en, prayer_en)
 
-        dlg = PrayerAlertDialog(name_id, prayer_en, time_str, self)
+        dlg = PrayerAlertDialog(name_id, prayer_en, time_str, None)
         dlg.remind_requested.connect(lambda m, n=prayer_en, ts=time_str: self._schedule_reminder(n, ts, m))
 
         def _on_sound_done():

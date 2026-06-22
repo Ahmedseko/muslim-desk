@@ -369,6 +369,18 @@ class SettingsPage(QWidget):
             self._prayer_alarm_checks[en] = cb
 
         notif_card.body.addLayout(self._make_hint(t("hint_sound")))
+
+        # Preview button
+        btn_preview = QPushButton(t("btn_preview_notif"))
+        btn_preview.setFixedHeight(36)
+        btn_preview.setStyleSheet(
+            f"QPushButton {{ background: {th.SURFACE_2}; border: 1px solid {th.ACCENT_DK}; "
+            f"border-radius: 8px; color: {th.ACCENT}; font-weight: 600; font-size: 13px; }}"
+            f"QPushButton:hover {{ background: {th.BTN_HOVER}; }}"
+        )
+        btn_preview.clicked.connect(self._preview_notification)
+        notif_card.body.addWidget(btn_preview)
+
         root.addWidget(notif_card)
 
         # ── Window behavior
@@ -684,6 +696,20 @@ class SettingsPage(QWidget):
         for w in (self._lat_spin, self._lon_spin, self._tz_spin,
                   self._alt_spin, self._city_edit, self._country_edit):
             w.setEnabled(manual)
+
+    def _preview_notification(self):
+        from datetime import datetime
+        from ...core.notification_manager import PrayerAlertDialog
+        now = datetime.now().strftime("%H:%M")
+        dlg = PrayerAlertDialog("Dzuhur", "Dhuhr", now, None)
+        dlg.remind_requested.connect(lambda _: dlg.accept())
+
+        def _stop_sound():
+            self._win._notif.stop_sound()
+
+        dlg.finished.connect(_stop_sound)
+        self._win._notif.play_adzan("Dhuhr")
+        dlg.show()
 
     def _browse_sound(self):
         path, _ = QFileDialog.getOpenFileName(
