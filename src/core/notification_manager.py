@@ -138,13 +138,13 @@ class PrayerAlertDialog(QDialog):
         outer.setSpacing(0)
 
         card = QFrame()
+        card.setObjectName("AlertCard")
         card.setStyleSheet(f"""
-            QFrame {{
+            QFrame#AlertCard {{
                 background: {th.SURFACE};
                 border: 2px solid {th.ACCENT_DK};
                 border-radius: 16px;
             }}
-            QLabel {{ background: transparent; color: {th.TEXT}; }}
         """)
         outer.addWidget(card)
 
@@ -179,7 +179,7 @@ class PrayerAlertDialog(QDialog):
 
         sep = QFrame()
         sep.setFixedHeight(1)
-        sep.setStyleSheet(f"background: {th.BORDER};")
+        sep.setStyleSheet(f"QFrame {{ background: {th.BORDER}; border: none; border-radius: 0; }}")
         root.addWidget(sep)
 
         btn_row = QHBoxLayout()
