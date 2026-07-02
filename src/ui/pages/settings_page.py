@@ -702,6 +702,7 @@ class SettingsPage(QWidget):
         from ...core.notification_manager import PrayerAlertDialog
         now = datetime.now().strftime("%H:%M")
         dlg = PrayerAlertDialog("Dzuhur", "Dhuhr", now, None)
+        self._preview_dlg = dlg  # keep ref: parentless top-level would else be GC'd
         dlg.remind_requested.connect(lambda _: dlg.accept())
 
         def _stop_sound():

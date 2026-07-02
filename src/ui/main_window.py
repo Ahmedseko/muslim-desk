@@ -369,6 +369,7 @@ class MainWindow(QMainWindow):
         name_id = i18n_prayer_name(prayer_en) or pc.PRAYER_NAMES_ID.get(prayer_en, prayer_en)
 
         dlg = PrayerAlertDialog(name_id, prayer_en, time_str, None)
+        self._alert_dlg = dlg  # keep ref: parentless top-level would else be GC'd
         dlg.remind_requested.connect(lambda m, n=prayer_en, ts=time_str: self._schedule_reminder(n, ts, m))
 
         def _on_sound_done():
